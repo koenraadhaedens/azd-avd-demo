@@ -4,14 +4,11 @@ param environmentName string
 @description('Location for resources')
 param location string
 
-@description('Domain name for Azure AD DS')
-param domainName string
-
 @description('Resource tags')
 param tags object
 
-// Generate unique storage account name
-var storageAccountName = 'st${toLower(replace(environmentName, '-', ''))}appattach'
+// Generate unique storage account name (max 24 chars)
+var storageAccountName = 'st${take(toLower(replace(environmentName, '-', '')), 8)}${take(uniqueString(resourceGroup().id), 10)}aa'
 
 // Storage account for App Attach
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
@@ -29,19 +26,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     networkAcls: {
       defaultAction: 'Allow'
     }
-    azureFilesIdentityBasedAuthentication: {
-      directoryServiceOptions: 'AADDS'
-      activeDirectoryProperties: {
-        domainName: domainName
-        domainSid: ''
-        forestName: domainName
-        netBiosDomainName: split(domainName, '.')[0]
-        domainGuid: ''
-        azureStorageSid: ''
-        samAccountName: ''
-        accountType: ''
-      }
-    }
   }
 }
 
@@ -49,18 +33,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
-  properties: {
-    protocolSettings: {
-      smb: {
-        multichannel: {
-          enabled: false
-        }
-        authenticationMethods: 'Kerberos'
-        channelEncryption: 'AES-256-GCM'
-        kerberosTicketEncryption: 'AES-256'
-      }
-    }
-  }
 }
 
 // File share for App Attach packages

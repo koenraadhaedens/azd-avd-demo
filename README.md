@@ -1,5 +1,7 @@
 # Azure Virtual Desktop Demo Environment
 
+> **🚀 Quick Start**: If you're having deployment issues, check the [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for troubleshooting and manual configuration steps.
+
 ## Overview
 This repository contains a complete Azure Virtual Desktop (AVD) demo environment deployed using Azure Developer CLI (azd) and Bicep templates. The solution provides a production-ready AVD infrastructure with FSLogix profiles, App Attach capabilities, and proper security configuration.
 

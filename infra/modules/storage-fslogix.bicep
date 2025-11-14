@@ -4,23 +4,20 @@ param environmentName string
 @description('Location for resources')
 param location string
 
-@description('Domain name for Azure AD DS')
-param domainName string
-
 @description('Resource tags')
 param tags object
 
-// Generate unique storage account name
-var storageAccountName = 'st${toLower(replace(environmentName, '-', ''))}fslogix'
+// Generate unique storage account name (max 24 chars)
+var storageAccountName = 'st${take(toLower(replace(environmentName, '-', '')), 8)}${take(uniqueString(resourceGroup().id), 10)}fs'
 
 // Storage account for FSLogix profiles
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
   tags: tags
-  kind: 'FileStorage'
+  kind: 'StorageV2'
   sku: {
-    name: 'Premium_LRS'
+    name: 'Standard_LRS'
   }
   properties: {
     allowBlobPublicAccess: false
@@ -29,19 +26,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     networkAcls: {
       defaultAction: 'Allow'
     }
-    azureFilesIdentityBasedAuthentication: {
-      directoryServiceOptions: 'AADDS'
-      activeDirectoryProperties: {
-        domainName: domainName
-        domainSid: ''
-        forestName: domainName
-        netBiosDomainName: split(domainName, '.')[0]
-        domainGuid: ''
-        azureStorageSid: ''
-        samAccountName: ''
-        accountType: ''
-      }
-    }
   }
 }
 
@@ -49,18 +33,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
-  properties: {
-    protocolSettings: {
-      smb: {
-        multichannel: {
-          enabled: true
-        }
-        authenticationMethods: 'Kerberos'
-        channelEncryption: 'AES-256-GCM'
-        kerberosTicketEncryption: 'AES-256'
-      }
-    }
-  }
 }
 
 // File share for FSLogix profiles
@@ -70,7 +42,7 @@ resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-0
   properties: {
     shareQuota: 1024
     enabledProtocols: 'SMB'
-    accessTier: 'Premium'
+    accessTier: 'Hot'
   }
 }
 

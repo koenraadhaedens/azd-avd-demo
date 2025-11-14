@@ -102,6 +102,7 @@ resource networkInterfaces 'Microsoft.Network/networkInterfaces@2023-09-01' = [f
 resource avdAgentInstall 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = [for i in range(0, sessionHostCount): {
   name: 'AVDAgentInstall'
   parent: sessionHosts[i]
+  location: location
   properties: {
     publisher: 'Microsoft.Compute'
     type: 'CustomScriptExtension'

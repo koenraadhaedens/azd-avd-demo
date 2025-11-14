@@ -59,7 +59,6 @@ module fslogixStorage './modules/storage-fslogix.bicep' = {
   params: {
     environmentName: environmentName
     location: location
-    domainName: domainName
     tags: tags
   }
 }
@@ -70,7 +69,6 @@ module appAttachStorage './modules/storage-appattach.bicep' = {
   params: {
     environmentName: environmentName
     location: location
-    domainName: domainName
     tags: tags
   }
 }
@@ -113,4 +111,8 @@ output fslogixFileShareName string = fslogixStorage.outputs.fileShareName
 output appAttachStorageAccountName string = appAttachStorage.outputs.storageAccountName
 output appAttachFileShareName string = appAttachStorage.outputs.fileShareName
 output sessionHostNames array = sessionHosts.outputs.sessionHostNames
+
+// Additional outputs for azd environment variables
+output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName
+output AZURE_APP_ATTACH_STORAGE_ACCOUNT_NAME string = appAttachStorage.outputs.storageAccountName
 

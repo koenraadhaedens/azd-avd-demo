@@ -2,6 +2,7 @@
 
 # Post-provision script for AVD environment
 # This script configures RBAC assignments and NTFS permissions
+# If permissions are insufficient, it will log the issue and continue
 
 param(
     [Parameter(Mandatory=$false)]
@@ -11,7 +12,13 @@ param(
     [string]$ResourceGroupName = $env:AZURE_RESOURCE_GROUP_NAME,
     
     [Parameter(Mandatory=$false)]
-    [string]$EnvironmentName = $env:AZURE_ENV_NAME
+    [string]$EnvironmentName = $env:AZURE_ENV_NAME,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$FSLogixStorageAccountName,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$AppAttachStorageAccountName
 )
 
 Write-Host "Starting post-provision configuration for AVD environment: $EnvironmentName" -ForegroundColor Green
@@ -20,20 +27,48 @@ Write-Host "Starting post-provision configuration for AVD environment: $Environm
 try {
     $context = Get-AzContext
     if (-not $context) {
-        Write-Host "Please run 'Connect-AzAccount' first" -ForegroundColor Red
-        exit 1
+        Write-Host "No Azure context found. Attempting to use managed identity..." -ForegroundColor Yellow
+        # Try to authenticate with managed identity if running in Azure
+        try {
+            Connect-AzAccount -Identity -ErrorAction Stop
+            $context = Get-AzContext
+        }
+        catch {
+            Write-Host "Managed identity authentication failed. Skipping post-provision tasks." -ForegroundColor Yellow
+            Write-Host "Please run .\scripts\manual-post-provision.ps1 manually with appropriate permissions." -ForegroundColor Yellow
+            exit 0
+        }
     }
     Write-Host "Using Azure context: $($context.Account.Id)" -ForegroundColor Yellow
 }
 catch {
-    Write-Host "Azure PowerShell module not found. Installing..." -ForegroundColor Yellow
-    Install-Module -Name Az -Scope CurrentUser -Force
-    Connect-AzAccount
+    Write-Host "Azure PowerShell module not found or authentication failed." -ForegroundColor Yellow
+    Write-Host "Please run .\scripts\manual-post-provision.ps1 manually with appropriate permissions." -ForegroundColor Yellow
+    exit 0
 }
 
-# Set subscription context
+# Set subscription context - use the subscription from environment variable if available
 if ($SubscriptionId) {
-    Set-AzContext -SubscriptionId $SubscriptionId
+    try {
+        $currentContext = Get-AzContext
+        Write-Host "Current subscription: $($currentContext.Subscription.Id)" -ForegroundColor Yellow
+        
+        if ($currentContext.Subscription.Id -ne $SubscriptionId) {
+            Write-Host "Setting subscription context to: $SubscriptionId" -ForegroundColor Yellow
+            Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction Stop
+            Write-Host "Successfully set context to subscription: $SubscriptionId" -ForegroundColor Green
+        } else {
+            Write-Host "Already in correct subscription context" -ForegroundColor Green
+        }
+    }
+    catch {
+        Write-Host "Failed to set subscription context to: $SubscriptionId" -ForegroundColor Red
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Continuing with current subscription: $((Get-AzContext).Subscription.Id)" -ForegroundColor Yellow
+    }
+} else {
+    $currentContext = Get-AzContext
+    Write-Host "No subscription ID provided, using current subscription: $($currentContext.Subscription.Id)" -ForegroundColor Yellow
 }
 
 # Get resource group if not provided
@@ -43,18 +78,47 @@ if (-not $ResourceGroupName) {
 
 Write-Host "Working with Resource Group: $ResourceGroupName" -ForegroundColor Yellow
 
-# Get storage accounts
-$fslogixStorageAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName | Where-Object { $_.StorageAccountName -like "*fslogix*" }
-$appAttachStorageAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName | Where-Object { $_.StorageAccountName -like "*appattach*" }
+# Get storage accounts - use provided names or search for them
+Write-Host "Attempting to verify storage accounts..." -ForegroundColor Yellow
 
-if (-not $fslogixStorageAccount) {
-    Write-Host "FSLogix storage account not found!" -ForegroundColor Red
-    exit 1
+$storageAccessError = $false
+
+# Check if storage account names are provided
+if (-not $FSLogixStorageAccountName -or -not $AppAttachStorageAccountName) {
+    Write-Host "Storage account names not provided via environment variables." -ForegroundColor Yellow
+    Write-Host "Post-provision configuration skipped." -ForegroundColor Yellow
+    Write-Host "Please run .\scripts\manual-post-provision.ps1 manually." -ForegroundColor Yellow
+    exit 0
 }
 
-if (-not $appAttachStorageAccount) {
-    Write-Host "App Attach storage account not found!" -ForegroundColor Red
-    exit 1
+# Try to verify storage accounts exist with current permissions
+try {
+    Write-Host "Checking FSLogix storage account: $FSLogixStorageAccountName" -ForegroundColor Yellow
+    $fslogixStorageAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $FSLogixStorageAccountName -ErrorAction Stop
+    Write-Host "✓ FSLogix storage account verified" -ForegroundColor Green
+}
+catch {
+    Write-Host "✗ Cannot access FSLogix storage account: $($_.Exception.Message)" -ForegroundColor Yellow
+    $storageAccessError = $true
+}
+
+try {
+    Write-Host "Checking App Attach storage account: $AppAttachStorageAccountName" -ForegroundColor Yellow
+    $appAttachStorageAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $AppAttachStorageAccountName -ErrorAction Stop
+    Write-Host "✓ App Attach storage account verified" -ForegroundColor Green
+}
+catch {
+    Write-Host "✗ Cannot access App Attach storage account: $($_.Exception.Message)" -ForegroundColor Yellow
+    $storageAccessError = $true
+}
+
+if ($storageAccessError) {
+    Write-Host "`nInsufficient permissions to complete automatic post-provision configuration." -ForegroundColor Yellow
+    Write-Host "This is normal for deployments with limited service principal permissions." -ForegroundColor Yellow
+    Write-Host "`nTo complete the AVD setup, please run the manual script:" -ForegroundColor Cyan
+    Write-Host ".\scripts\manual-post-provision.ps1" -ForegroundColor White
+    Write-Host "`nMake sure you are logged in with sufficient permissions (Contributor or Owner role)." -ForegroundColor Yellow
+    exit 0
 }
 
 Write-Host "Found storage accounts:" -ForegroundColor Green

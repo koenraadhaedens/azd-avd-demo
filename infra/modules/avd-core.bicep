@@ -63,4 +63,5 @@ output workspaceId string = workspace.id
 output workspaceName string = workspace.name
 output applicationGroupId string = applicationGroup.id
 output applicationGroupName string = applicationGroup.name
-output hostPoolToken string = hostPool.properties.registrationInfo.token
+@secure()
+output hostPoolToken string = hostPool.listRegistrationTokens().value[0].token
