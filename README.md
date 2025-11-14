@@ -52,7 +52,7 @@ Before deploying, ensure Azure AD DS is configured:
 
 ### 1. Clone and Initialize
 ```bash
-git clone https://github.com/your-org/azd-avd-demo.git
+git clone https://github.com/koenraadhaedens/azd-avd-demo.git
 cd azd-avd-demo
 azd auth login
 azd init
