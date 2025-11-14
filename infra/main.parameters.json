@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "winVMPassword": {
+      "value": "${WIN_VM_PASSWORD}"
+    },
+    "domainName": {
+      "value": "${AADDS_DOMAIN_NAME=contoso.com}"
+    },
+    "adminUsername": {
+      "value": "${AVD_ADMIN_USERNAME=avdadmin}"
+    },
+    "vnetAddressPrefix": {
+      "value": "${VNET_ADDRESS_PREFIX=10.0.0.0/16}"
+    },
+    "subnetAddressPrefix": {
+      "value": "${SUBNET_ADDRESS_PREFIX=10.0.1.0/24}"
+    },
+    "sessionHostCount": {
+      "value": "${SESSION_HOST_COUNT=2}"
+    }
+  }
+}

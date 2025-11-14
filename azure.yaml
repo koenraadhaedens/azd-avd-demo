@@ -1,0 +1,18 @@
+name: azd-avd-demo
+metadata:
+  template: azd-avd-demo@0.0.1-beta
+
+services:
+  avd-infrastructure:
+    project: ./infra
+    language: bicep
+    host: containerapp
+
+hooks:
+  postprovision:
+    windows:
+      shell: pwsh
+      run: ./scripts/post-provision.ps1
+    posix:
+      shell: sh
+      run: ./scripts/post-provision.sh
