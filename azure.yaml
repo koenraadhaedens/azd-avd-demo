@@ -1,12 +1,8 @@
-name: azd-avd-demo
+name: tdd-azd-avd
 metadata:
-  template: azd-avd-demo@0.0.1-beta
-
-services:
-  avd-infrastructure:
-    project: ./infra
-    language: bicep
-    host: containerapp
+  template: tdd-azd-avd@0.0.1-beta
+infra:
+   provider: "bicep"
 
 hooks:
   postprovision:
@@ -16,3 +12,8 @@ hooks:
     posix:
       shell: sh
       run: ./scripts/post-provision.sh
+
+
+
+
+      
