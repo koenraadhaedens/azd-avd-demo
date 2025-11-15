@@ -8,7 +8,7 @@ param location string
 param tags object
 
 // Generate unique storage account name (max 24 chars)
-var storageAccountName = 'st${take(toLower(replace(environmentName, '-', '')), 8)}${take(uniqueString(resourceGroup().id), 10)}fs'
+var storageAccountName = 'st${take(toLower(replace(environmentName, 'fs-', '')), 8)}${take(uniqueString(resourceGroup().id), 10)}fs'
 
 // Storage account for FSLogix profiles
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {

@@ -8,7 +8,7 @@ param location string
 param tags object
 
 // Generate unique storage account name (max 24 chars)
-var storageAccountName = 'st${take(toLower(replace(environmentName, '-', '')), 8)}${take(uniqueString(resourceGroup().id), 10)}aa'
+var storageAccountName = 'st${take(toLower(replace(environmentName, 'app-', '')), 8)}${take(uniqueString(resourceGroup().id), 10)}aa'
 
 // Storage account for App Attach
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
