@@ -24,7 +24,7 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
   tags: tags
   kind: 'AzurePowerShell'
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
   }
   properties: {
     azPowerShellVersion: '11.0'
