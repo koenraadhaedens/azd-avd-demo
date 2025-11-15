@@ -105,7 +105,7 @@ resource networkInterfaces 'Microsoft.Network/networkInterfaces@2023-09-01' = [f
   }
 }]
 
-// Domain join extension
+// Domain join extension with retry logic
 resource domainJoin 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = [for i in range(0, sessionHostCount): {
   name: 'DomainJoin'
   parent: sessionHosts[i]
@@ -121,6 +121,8 @@ resource domainJoin 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = 
       User: domainAdminUsername
       Restart: 'true'
       Options: '3'
+      NumberOfRetries: '4'
+      RetryIntervalInMinutes: '5'
     }
     protectedSettings: {
       Password: domainAdminPassword

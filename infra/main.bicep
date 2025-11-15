@@ -69,6 +69,18 @@ module aadds './modules/aad-domain-services.bicep' = {
   }
 }
 
+// Wait for Azure AD DS to be fully operational before proceeding
+module waitForAadds './modules/wait-for-aadds.bicep' = {
+  scope: rg
+  params: {
+    environmentName: environmentName
+    location: location
+    domainName: domainName
+    aaddsResourceId: aadds.outputs.domainServicesId
+    tags: tags
+  }
+}
+
 // Deploy FSLogix storage account
 module fslogixStorage './modules/storage-fslogix.bicep' = {
   scope: rg
@@ -116,6 +128,9 @@ module sessionHosts './modules/session-hosts.bicep' = {
     fslogixFileShareName: fslogixStorage.outputs.fileShareName
     tags: tags
   }
+  dependsOn: [
+    waitForAadds
+  ]
 }
 
 // Output important information for post-deployment configuration
@@ -130,6 +145,8 @@ output appAttachFileShareName string = appAttachStorage.outputs.fileShareName
 output sessionHostNames array = sessionHosts.outputs.sessionHostNames
 output domainName string = aadds.outputs.domainName
 output aaddsDomainGuid string = aadds.outputs.domainGuid
+output aaddsReadyStatus string = waitForAadds.outputs.status
+output aaddsReadyTime string = waitForAadds.outputs.readyTime
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName

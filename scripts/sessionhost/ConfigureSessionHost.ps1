@@ -31,6 +31,39 @@ Write-Host "Computer Name: $env:COMPUTERNAME"
 Write-Host "Domain: $DomainName"
 Write-Host "Storage Account: $StorageAccountName"
 
+# Verify domain join status
+try {
+    Write-Host "Verifying domain join status..." -ForegroundColor Yellow
+    $computerInfo = Get-ComputerInfo
+    $domainJoined = $computerInfo.PartOfDomain
+    $currentDomain = $computerInfo.Domain
+    
+    if ($domainJoined -and ($currentDomain -eq $DomainName)) {
+        Write-Host "✓ Computer is successfully joined to domain: $currentDomain" -ForegroundColor Green
+    } elseif ($domainJoined) {
+        Write-Warning "Computer is joined to domain '$currentDomain' but expected '$DomainName'"
+    } else {
+        Write-Warning "Computer is not domain joined. Some configurations may fail."
+        Write-Host "Current workgroup: $($computerInfo.Workgroup)"
+        
+        # Wait a bit for domain join to complete if it's still in progress
+        Write-Host "Waiting 60 seconds for domain join to complete..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 60
+        
+        # Re-check domain status
+        $computerInfo = Get-ComputerInfo
+        $domainJoined = $computerInfo.PartOfDomain
+        if ($domainJoined) {
+            Write-Host "✓ Domain join completed: $($computerInfo.Domain)" -ForegroundColor Green
+        } else {
+            Write-Error "Domain join has not completed. Continuing with configuration..."
+        }
+    }
+}
+catch {
+    Write-Error "Failed to verify domain join status: $($_.Exception.Message)"
+}
+
 # Download and install AVD Boot Loader
 try {
     Write-Host "Downloading AVD Boot Loader..." -ForegroundColor Yellow

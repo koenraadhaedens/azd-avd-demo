@@ -49,6 +49,9 @@ Azure AD Domain Services will be automatically deployed and configured as part o
 1. Create and configure Azure AD DS in your tenant
 2. Set up DNS settings for the virtual network
 3. Use a default domain name (configurable via parameters)
+4. **Wait for Azure AD DS to be fully operational** before deploying session hosts (prevents domain join failures)
+
+> **Note**: Azure AD DS deployment takes 60-90 minutes. The template includes an automatic wait mechanism to ensure domain services are ready before session hosts are deployed. See [AZURE_AD_DS_TIMING_FIX.md](./AZURE_AD_DS_TIMING_FIX.md) for technical details.
 
 ## Quick Start Deployment
 
