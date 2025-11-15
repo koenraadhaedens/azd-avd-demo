@@ -20,8 +20,11 @@ param domainAdminPassword string
 @description('Domain name for Azure AD Domain Services')
 param domainName string = 'contoso.local'
 
+@description('Domain admin username (will be created in Azure AD and synced to Azure AD DS)')
+param domainAdminUsername string = 'addomainadmin'
+
 @description('Admin username for session hosts')
-param adminUsername string = 'avdadmin'
+param adminUsername string = 'addomainadmin'
 
 @description('Virtual network address prefix')
 param vnetAddressPrefix string = '10.0.0.0/16'
@@ -120,6 +123,7 @@ module sessionHosts './modules/session-hosts.bicep' = {
     adminUsername: adminUsername
     adminPassword: winVMPassword
     domainName: domainName
+    domainAdminUsername: domainAdminUsername
     domainAdminPassword: domainAdminPassword
     subnetId: network.outputs.subnetId
     hostPoolToken: avdCore.outputs.hostPoolToken

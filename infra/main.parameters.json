@@ -17,8 +17,11 @@
     "domainName": {
       "value": "${AADDS_DOMAIN_NAME=contoso.local}"
     },
+    "domainAdminUsername": {
+      "value": "${DOMAIN_ADMIN_USERNAME=addomainadmin}"
+    },
     "adminUsername": {
-      "value": "${AVD_ADMIN_USERNAME=avdadmin}"
+      "value": "${AVD_ADMIN_USERNAME=addomainadmin}"
     },
     "vnetAddressPrefix": {
       "value": "${VNET_ADDRESS_PREFIX=10.0.0.0/16}"

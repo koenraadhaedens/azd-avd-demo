@@ -159,6 +159,102 @@ if (-not $avdAdminsGroupId -or -not $avdUsersGroupId) {
     exit 1
 }
 
+# Function to create Azure AD user
+function New-AzureADUserIfNotExists {
+    param(
+        [string]$UserPrincipalName,
+        [string]$DisplayName,
+        [string]$MailNickname,
+        [string]$Password,
+        [string]$UsageLocation = "US"
+    )
+    
+    try {
+        Write-Host "Checking for existing user: $UserPrincipalName" -ForegroundColor Yellow
+        $existingUser = Get-AzADUser -UserPrincipalName $UserPrincipalName -ErrorAction SilentlyContinue
+        
+        if (-not $existingUser) {
+            Write-Host "Creating Azure AD user: $UserPrincipalName" -ForegroundColor Yellow
+            
+            # Create password profile
+            $passwordProfile = @{
+                Password = $Password
+                ForceChangePasswordNextSignIn = $true
+            }
+            
+            # Create the user
+            $user = New-AzADUser -UserPrincipalName $UserPrincipalName -DisplayName $DisplayName -MailNickname $MailNickname -PasswordProfile $passwordProfile -UsageLocation $UsageLocation
+            
+            if ($user) {
+                Write-Host "Azure AD user created successfully: $($user.UserPrincipalName)" -ForegroundColor Green
+                return $user.Id
+            }
+            else {
+                Write-Host "Failed to create Azure AD user: $UserPrincipalName" -ForegroundColor Red
+                return $null
+            }
+        }
+        else {
+            Write-Host "Azure AD user already exists: $UserPrincipalName" -ForegroundColor Green
+            return $existingUser.Id
+        }
+    }
+    catch {
+        Write-Host "Error working with Azure AD user $UserPrincipalName : $($_.Exception.Message)" -ForegroundColor Red
+        return $null
+    }
+}
+
+# Function to add user to group
+function Add-UserToAzureADGroup {
+    param(
+        [string]$UserId,
+        [string]$GroupId,
+        [string]$UserName,
+        [string]$GroupName
+    )
+    
+    try {
+        # Check if user is already a member
+        $isMember = Get-AzADGroupMember -GroupId $GroupId | Where-Object { $_.Id -eq $UserId }
+        
+        if (-not $isMember) {
+            Write-Host "Adding user $UserName to group $GroupName" -ForegroundColor Yellow
+            Add-AzADGroupMember -GroupId $GroupId -MemberId $UserId
+            Write-Host "User added to group successfully" -ForegroundColor Green
+        }
+        else {
+            Write-Host "User $UserName is already a member of group $GroupName" -ForegroundColor Green
+        }
+    }
+    catch {
+        Write-Host "Error adding user to group: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+# Create the addomainadmin user
+Write-Host "Setting up domain admin user..." -ForegroundColor Yellow
+$domainAdminUPN = "addomainadmin@$((Get-AzContext).Tenant.Id | Get-AzTenant).DefaultDomain"
+
+# Generate a secure password for the domain admin
+$domainAdminPassword = -join ((65..90) + (97..122) + (48..57) + @(33,35,36,37,38,42,43,45,61,63,64) | Get-Random -Count 16 | ForEach-Object {[char]$_})
+
+$domainAdminUserId = New-AzureADUserIfNotExists -UserPrincipalName $domainAdminUPN -DisplayName "AD Domain Admin" -MailNickname "addomainadmin" -Password $domainAdminPassword
+
+if ($domainAdminUserId) {
+    # Add the domain admin to the AVD Admins group
+    Add-UserToAzureADGroup -UserId $domainAdminUserId -GroupId $avdAdminsGroupId -UserName "addomainadmin" -GroupName "AVD Admins"
+    
+    Write-Host "`nDOMAIN ADMIN CREDENTIALS:" -ForegroundColor Red
+    Write-Host "Username: $domainAdminUPN" -ForegroundColor White
+    Write-Host "Password: $domainAdminPassword" -ForegroundColor White
+    Write-Host "IMPORTANT: Save these credentials securely!" -ForegroundColor Red
+    Write-Host ""
+}
+else {
+    Write-Host "Failed to create domain admin user. Continuing with existing configuration..." -ForegroundColor Yellow
+}
+
 # Function to assign RBAC role
 function Set-StorageRoleAssignment {
     param(
@@ -266,10 +362,11 @@ catch {
 Write-Host "`nPost-provision configuration completed!" -ForegroundColor Green
 Write-Host "`nNext Steps:" -ForegroundColor Cyan
 Write-Host "1. Add users to the 'AVD Users' Azure AD group" -ForegroundColor White
-Write-Host "2. Add administrators to the 'AVD Admins' Azure AD group" -ForegroundColor White
-Write-Host "3. Upload MSIX packages to the App Attach storage account" -ForegroundColor White
-Write-Host "4. Configure App Attach applications in the AVD Host Pool" -ForegroundColor White
-Write-Host "5. Test user access to the AVD environment" -ForegroundColor White
+Write-Host "2. Add additional administrators to the 'AVD Admins' Azure AD group" -ForegroundColor White
+Write-Host "3. The 'addomainadmin' user has been created and added to AVD Admins group" -ForegroundColor White
+Write-Host "4. Upload MSIX packages to the App Attach storage account" -ForegroundColor White
+Write-Host "5. Configure App Attach applications in the AVD Host Pool" -ForegroundColor White
+Write-Host "6. Test user access to the AVD environment" -ForegroundColor White
 
 Write-Host "`nResource Information:" -ForegroundColor Cyan
 Write-Host "Resource Group: $ResourceGroupName" -ForegroundColor White
@@ -277,3 +374,4 @@ Write-Host "FSLogix Storage: $($fslogixStorageAccount.StorageAccountName)" -Fore
 Write-Host "App Attach Storage: $($appAttachStorageAccount.StorageAccountName)" -ForegroundColor White
 Write-Host "AVD Admins Group ID: $avdAdminsGroupId" -ForegroundColor White
 Write-Host "AVD Users Group ID: $avdUsersGroupId" -ForegroundColor White
+Write-Host "Domain Admin User: addomainadmin (added to AVD Admins group)" -ForegroundColor White
