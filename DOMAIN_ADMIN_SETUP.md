@@ -121,6 +121,85 @@ After deployment, verify the configuration:
 - Check RBAC assignments on storage accounts
 - Verify the user has necessary permissions in Azure AD DS
 
+## Troubleshooting
+
+### Azure AD DS Deployment Failures
+
+If you encounter "The managed domain is in a failed state" error, see the comprehensive troubleshooting guide: [AZURE_AD_DS_TROUBLESHOOTING.md](./AZURE_AD_DS_TROUBLESHOOTING.md)
+
+Common issues and quick fixes:
+
+#### Domain Admin User Creation Fails
+- **Issue**: Deployment script fails to create the domain admin user
+- **Cause**: Insufficient Azure AD permissions
+- **Solution**: Ensure you have Global Administrator role in Azure AD
+- **Verification**: 
+  ```powershell
+  $user = Get-AzADUser -UserPrincipalName (Get-AzContext).Account.Id
+  $globalAdminRole = Get-AzADDirectoryRole | Where-Object { $_.DisplayName -eq "Global Administrator" }
+  Get-AzADDirectoryRoleMember -ObjectId $globalAdminRole.Id | Where-Object { $_.Id -eq $user.Id }
+  ```
+
+#### Domain Join Fails
+- **Issue**: Session hosts fail to join the domain even with domain admin user created
+- **Cause**: User not synchronized to Azure AD DS or Azure AD DS not ready
+- **Solution**: Check the wait-for-user-sync deployment script logs
+- **Manual Check**:
+  ```powershell
+  # Check if Azure AD DS is running
+  $aadds = Get-AzResource -ResourceType "Microsoft.AAD/DomainServices"
+  $aadds.Properties.domainServiceStatus
+  ```
+
+#### User Creation Timeout
+- **Issue**: Domain admin user creation script times out
+- **Cause**: Network connectivity or Azure AD service issues
+- **Solution**: Run the post-provision script manually to create the user
+
+### User Synchronization Issues
+
+#### User Not Appearing in Azure AD DS
+- **Wait Time**: Azure AD to Azure AD DS sync can take 20-30 minutes
+- **Force Sync**: There's no way to force sync, you must wait
+- **Verification**: Check Azure portal → Azure AD Domain Services → Users
+
+#### Password Issues
+- **Issue**: Domain admin password doesn't work for domain operations
+- **Cause**: Password complexity requirements or sync issues
+- **Solution**: Reset the password in Azure AD and wait for sync:
+  ```powershell
+  $userPrincipalName = "addomainadmin@yourdomain.onmicrosoft.com"
+  $newPassword = ConvertTo-SecureString "NewSecurePassword123!" -AsPlainText -Force
+  Set-AzADUser -UserPrincipalName $userPrincipalName -Password $newPassword
+  ```
+
+### Deployment Script Issues
+
+#### Managed Identity Permissions
+- **Issue**: Deployment script fails with permission errors
+- **Cause**: Managed identity lacks Azure AD permissions
+- **Solution**: The script should automatically get necessary permissions, but may need manual role assignment
+
+#### Script Timeout
+- **Issue**: User creation script times out after 30 minutes
+- **Solution**: Increase timeout or run creation manually:
+  ```powershell
+  # Manual user creation
+  $userParams = @{
+    UserPrincipalName = "addomainadmin@yourdomain.onmicrosoft.com"
+    DisplayName = "AD Domain Admin"
+    MailNickname = "addomainadmin"
+    PasswordProfile = @{
+      Password = "SecurePassword123!"
+      ForceChangePasswordNextSignIn = $true
+    }
+    UsageLocation = "US"
+    AccountEnabled = $true
+  }
+  
+  New-AzADUser @userParams
+  ```
+
 ## Best Practices
 
 1. **Password Management**: Store the generated password in a secure password manager
@@ -128,3 +207,5 @@ After deployment, verify the configuration:
 3. **Monitoring**: Monitor domain admin account usage through Azure AD audit logs
 4. **Rotation**: Regularly rotate the domain admin password following security policies
 5. **Least Privilege**: Only grant domain admin privileges when necessary for specific operations
+6. **Pre-Deployment Validation**: Always verify Global Administrator permissions before starting deployment
+7. **Staged Deployment**: For production environments, consider deploying Azure AD DS manually first, then the rest of the infrastructure
