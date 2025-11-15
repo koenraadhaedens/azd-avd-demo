@@ -67,16 +67,20 @@ azd init
 ```bash
 # Required settings
 azd env set AZURE_LOCATION "East US 2"
+azd env set TENANT_DOMAIN "contoso.onmicrosoft.com"  # Your Azure AD tenant domain (required for domain admin user creation)
 
 # Optional settings with defaults
 azd env set AADDS_DOMAIN_NAME "contoso.local"  # Domain name for Azure AD DS (will be created)
+azd env set DOMAIN_ADMIN_USERNAME "addomainadmin"  # Domain admin user (will be created in Azure AD)
 
 # Optional settings with defaults
-azd env set AVD_ADMIN_USERNAME "avdadmin"
+azd env set AVD_ADMIN_USERNAME "addomainadmin"
 azd env set VNET_ADDRESS_PREFIX "10.0.0.0/16"
 azd env set SUBNET_ADDRESS_PREFIX "10.0.1.0/24"
 azd env set SESSION_HOST_COUNT "2"
 ```
+
+**Important**: The `TENANT_DOMAIN` must be set to your Azure AD tenant's default domain (e.g., contoso.onmicrosoft.com). You can find this in the Azure portal under Azure Active Directory > Overview > Primary domain.
 
 ### 3. Deploy Infrastructure
 ```bash
@@ -88,9 +92,15 @@ When prompted, provide:
 - **VM Admin Password**: Secure password for session hosts (will be prompted securely)
 - **Domain Admin Password**: Password for the Azure AD DS domain admin account (will be prompted securely)
 
+The deployment will automatically:
+1. Create the `addomainadmin` user in Azure AD using the provided credentials
+2. Wait for the user to synchronize to Azure AD Domain Services
+3. Deploy session hosts that use this domain admin for domain join operations
+
 ### 4. Post-Deployment Configuration
 The deployment automatically runs a post-provision script that:
 - Creates "AVD Admins" and "AVD Users" Azure AD groups
+- Verifies the `addomainadmin` user exists and adds it to the AVD Admins group
 - Assigns appropriate RBAC roles to storage accounts
 - Configures FSLogix registry settings on session hosts
 - Sets up App Attach directory structure

@@ -30,7 +30,7 @@ param fslogixStorageAccountName string
 @description('FSLogix file share name')
 param fslogixFileShareName string
 
-@description('Azure AD DS domain admin username (e.g., addomainadmin)')
+@description('Azure AD DS domain admin username UPN (e.g., addomainadmin@contoso.onmicrosoft.com)')
 param domainAdminUsername string
 
 @secure()
@@ -118,7 +118,7 @@ resource domainJoin 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = 
     settings: {
       Name: domainName
       OUPath: ''
-      User: '${domainAdminUsername}@${domainName}'
+      User: domainAdminUsername
       Restart: 'true'
       Options: '3'
       NumberOfRetries: '4'

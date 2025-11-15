@@ -232,27 +232,50 @@ function Add-UserToAzureADGroup {
     }
 }
 
-# Create the addomainadmin user
-Write-Host "Setting up domain admin user..." -ForegroundColor Yellow
-$domainAdminUPN = "addomainadmin@$((Get-AzContext).Tenant.Id | Get-AzTenant).DefaultDomain"
+# Create the addomainadmin user (if not already created during deployment)
+Write-Host "Checking domain admin user setup..." -ForegroundColor Yellow
 
-# Generate a secure password for the domain admin
-$domainAdminPassword = -join ((65..90) + (97..122) + (48..57) + @(33,35,36,37,38,42,43,45,61,63,64) | Get-Random -Count 16 | ForEach-Object {[char]$_})
+# Try to get the tenant's default domain
+$tenantInfo = Get-AzTenant -TenantId (Get-AzContext).Tenant.Id
+$defaultDomain = $tenantInfo.Domains | Where-Object { $_.IsDefault -eq $true } | Select-Object -ExpandProperty Name
+if (-not $defaultDomain) {
+    $defaultDomain = (Get-AzContext).Tenant.Id + ".onmicrosoft.com"
+}
 
-$domainAdminUserId = New-AzureADUserIfNotExists -UserPrincipalName $domainAdminUPN -DisplayName "AD Domain Admin" -MailNickname "addomainadmin" -Password $domainAdminPassword
+$domainAdminUPN = "addomainadmin@$defaultDomain"
 
-if ($domainAdminUserId) {
-    # Add the domain admin to the AVD Admins group
-    Add-UserToAzureADGroup -UserId $domainAdminUserId -GroupId $avdAdminsGroupId -UserName "addomainadmin" -GroupName "AVD Admins"
+# Check if the domain admin user exists (it should have been created during deployment)
+$domainAdminUser = Get-AzADUser -UserPrincipalName $domainAdminUPN -ErrorAction SilentlyContinue
+
+if ($domainAdminUser) {
+    Write-Host "✓ Domain admin user found: $domainAdminUPN" -ForegroundColor Green
+    $domainAdminUserId = $domainAdminUser.Id
     
-    Write-Host "`nDOMAIN ADMIN CREDENTIALS:" -ForegroundColor Red
-    Write-Host "Username: $domainAdminUPN" -ForegroundColor White
-    Write-Host "Password: $domainAdminPassword" -ForegroundColor White
-    Write-Host "IMPORTANT: Save these credentials securely!" -ForegroundColor Red
-    Write-Host ""
+    # Ensure the domain admin is in the AVD Admins group
+    Add-UserToAzureADGroup -UserId $domainAdminUserId -GroupId $avdAdminsGroupId -UserName "addomainadmin" -GroupName "AVD Admins"
 }
 else {
-    Write-Host "Failed to create domain admin user. Continuing with existing configuration..." -ForegroundColor Yellow
+    Write-Host "⚠ Domain admin user not found. This should have been created during deployment." -ForegroundColor Yellow
+    Write-Host "Creating domain admin user manually..." -ForegroundColor Yellow
+    
+    # Generate a secure password for the domain admin
+    $domainAdminPassword = -join ((65..90) + (97..122) + (48..57) + @(33,35,36,37,38,42,43,45,61,63,64) | Get-Random -Count 16 | ForEach-Object {[char]$_})
+    
+    $domainAdminUserId = New-AzureADUserIfNotExists -UserPrincipalName $domainAdminUPN -DisplayName "AD Domain Admin" -MailNickname "addomainadmin" -Password $domainAdminPassword
+    
+    if ($domainAdminUserId) {
+        # Add the domain admin to the AVD Admins group
+        Add-UserToAzureADGroup -UserId $domainAdminUserId -GroupId $avdAdminsGroupId -UserName "addomainadmin" -GroupName "AVD Admins"
+        
+        Write-Host "`nDOMAIN ADMIN CREDENTIALS (Manually Created):" -ForegroundColor Red
+        Write-Host "Username: $domainAdminUPN" -ForegroundColor White
+        Write-Host "Password: $domainAdminPassword" -ForegroundColor White
+        Write-Host "IMPORTANT: Save these credentials securely!" -ForegroundColor Red
+        Write-Host ""
+    }
+    else {
+        Write-Host "✗ Failed to create domain admin user. Please check manually." -ForegroundColor Red
+    }
 }
 
 # Function to assign RBAC role

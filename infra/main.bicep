@@ -26,6 +26,9 @@ param domainAdminUsername string = 'addomainadmin'
 @description('Admin username for session hosts')
 param adminUsername string = 'addomainadmin'
 
+@description('Tenant domain for creating user UPN (e.g., contoso.onmicrosoft.com)')
+param tenantDomain string
+
 @description('Virtual network address prefix')
 param vnetAddressPrefix string = '10.0.0.0/16'
 
@@ -60,6 +63,19 @@ module network './modules/network.bicep' = {
   }
 }
 
+// Create domain admin user in Azure AD before deploying Azure AD DS
+module createDomainAdmin './modules/create-domain-admin.bicep' = {
+  scope: rg
+  params: {
+    environmentName: environmentName
+    location: location
+    domainAdminUsername: domainAdminUsername
+    domainAdminPassword: domainAdminPassword
+    tenantDomain: tenantDomain
+    tags: tags
+  }
+}
+
 // Deploy Azure AD Domain Services
 module aadds './modules/aad-domain-services.bicep' = {
   scope: rg
@@ -70,15 +86,19 @@ module aadds './modules/aad-domain-services.bicep' = {
     subnetId: network.outputs.aaddsSubnetId
     tags: tags
   }
+  dependsOn: [
+    createDomainAdmin
+  ]
 }
 
-// Wait for Azure AD DS to be fully operational before proceeding
-module waitForAadds './modules/wait-for-aadds.bicep' = {
+// Wait for Azure AD DS to be fully operational and user sync to complete before proceeding
+module waitForUserSync './modules/wait-for-user-sync.bicep' = {
   scope: rg
   params: {
     environmentName: environmentName
     location: location
     domainName: domainName
+    domainAdminUPN: createDomainAdmin.outputs.domainAdminUPN
     aaddsResourceId: aadds.outputs.domainServicesId
     tags: tags
   }
@@ -123,7 +143,7 @@ module sessionHosts './modules/session-hosts.bicep' = {
     adminUsername: adminUsername
     adminPassword: winVMPassword
     domainName: domainName
-    domainAdminUsername: domainAdminUsername
+    domainAdminUsername: createDomainAdmin.outputs.domainAdminUPN
     domainAdminPassword: domainAdminPassword
     subnetId: network.outputs.subnetId
     hostPoolToken: avdCore.outputs.hostPoolToken
@@ -133,7 +153,7 @@ module sessionHosts './modules/session-hosts.bicep' = {
     tags: tags
   }
   dependsOn: [
-    waitForAadds
+    waitForUserSync
   ]
 }
 
@@ -149,8 +169,12 @@ output appAttachFileShareName string = appAttachStorage.outputs.fileShareName
 output sessionHostNames array = sessionHosts.outputs.sessionHostNames
 output domainName string = aadds.outputs.domainName
 output aaddsDomainGuid string = aadds.outputs.domainGuid
-output aaddsReadyStatus string = waitForAadds.outputs.status
-output aaddsReadyTime string = waitForAadds.outputs.readyTime
+output aaddsReadyStatus string = waitForUserSync.outputs.status
+output aaddsReadyTime string = waitForUserSync.outputs.readyTime
+output userSyncComplete string = waitForUserSync.outputs.userSyncComplete
+output domainAdminUserUPN string = createDomainAdmin.outputs.domainAdminUPN
+output domainAdminUserId string = createDomainAdmin.outputs.userId
+output domainAdminCreationStatus string = createDomainAdmin.outputs.status
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName

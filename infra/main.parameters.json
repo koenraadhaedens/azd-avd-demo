@@ -20,6 +20,9 @@
     "domainAdminUsername": {
       "value": "${DOMAIN_ADMIN_USERNAME=addomainadmin}"
     },
+    "tenantDomain": {
+      "value": "${TENANT_DOMAIN}"
+    },
     "adminUsername": {
       "value": "${AVD_ADMIN_USERNAME=addomainadmin}"
     },

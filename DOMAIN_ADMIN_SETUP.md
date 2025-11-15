@@ -41,51 +41,59 @@ The AVD demo environment has been updated to use a dedicated domain admin user c
 Azure AD Domain Services (Azure AD DS) is different from traditional on-premises Active Directory:
 
 1. **User Creation**: Users must be created in Azure AD first, then synchronized to Azure AD DS
-2. **Domain Admin**: The `addomainadmin` user is created in Azure AD with domain admin privileges
-3. **Group Membership**: The user is automatically added to the AVD Admins group for proper permissions
+2. **Domain Admin**: The `addomainadmin` user is created in Azure AD during infrastructure deployment
+3. **Synchronization**: The user is synchronized to Azure AD DS before session hosts attempt domain join
+4. **Group Membership**: The user is added to the AVD Admins group during post-provision
 
 ### Deployment Process
 
-1. **Infrastructure Deployment**: Bicep templates deploy Azure AD DS and AVD infrastructure
-2. **User Creation**: Post-provision script creates `addomainadmin` in Azure AD
-3. **Group Assignment**: User is added to AVD Admins group
-4. **Domain Join**: Session hosts use `addomainadmin@{domainName}` for domain join operations
+1. **Network Infrastructure**: Virtual networks and subnets are deployed first
+2. **Domain Admin Creation**: `addomainadmin` user is created in Azure AD via deployment script
+3. **Azure AD DS Deployment**: Azure AD Domain Services is deployed with proper dependencies
+4. **User Synchronization Wait**: Deployment waits for the domain admin user to sync to Azure AD DS
+5. **AVD Infrastructure**: Host pools, workspaces, and storage accounts are deployed
+6. **Session Host Deployment**: VMs are deployed and joined to the domain using the pre-created domain admin
+7. **Post-Provision**: Groups are configured and the domain admin is added to AVD Admins group
 
 ### Security Considerations
 
-- **Password**: A secure random password is generated during deployment
+- **Password**: A secure random password is generated during infrastructure deployment
 - **Force Change**: User must change password on first login
+- **Pre-Creation**: User is available before domain join operations begin
+- **Synchronization**: Deployment waits for proper user sync before proceeding
 - **Group Membership**: User is automatically added to AVD Admins for proper permissions
-- **Credentials Display**: Credentials are displayed securely during deployment
 
 ## Usage
 
 ### During Deployment
 
-The domain admin user is automatically created when you run the post-provision script. The credentials will be displayed in the console output:
+The domain admin user is automatically created during the infrastructure deployment phase using a deployment script. The password is securely generated and the user is ready for domain join operations.
 
-```
-DOMAIN ADMIN CREDENTIALS:
-Username: addomainadmin@{tenant-domain}
-Password: {generated-password}
-IMPORTANT: Save these credentials securely!
-```
+**Important**: The deployment script creates the user, but the password is generated securely within the deployment. You'll need to reset the password after deployment if you need to use this account interactively.
+
+### Post-Deployment Configuration
+
+The post-provision script will:
+
+1. Verify the domain admin user exists
+2. Add the user to the AVD Admins group
+3. Configure proper permissions and group memberships
 
 ### Manual Creation
 
-If automatic creation fails, you can run the manual post-provision script:
-
-```powershell
-.\scripts\manual-post-provision.ps1
-```
+If automatic creation fails during deployment, the post-provision script will attempt to create the user manually and display the credentials.
 
 ### Environment Variables
 
-You can override the default domain admin username using environment variables:
+You can customize the deployment using these environment variables:
 
 ```bash
 export DOMAIN_ADMIN_USERNAME=mycustomadmin
+export TENANT_DOMAIN=contoso.onmicrosoft.com
+export DOMAIN_ADMIN_PASSWORD=SecurePassword123!
 ```
+
+**Required**: `TENANT_DOMAIN` must be set to your Azure AD tenant's default domain (e.g., contoso.onmicrosoft.com)
 
 ## Verification
 
