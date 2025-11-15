@@ -16,12 +16,12 @@ This repository contains a complete Azure Virtual Desktop (AVD) demo environment
 ### Storage Infrastructure
 - **FSLogix Profile Storage**: Premium Azure Files storage for user profiles
 - **App Attach Storage**: Standard storage for MSIX application packages
-- **Azure AD DS Integration**: Domain authentication for Azure Files
+- **Azure AD DS**: Automatically deployed and configured for domain authentication
 
 ### Network Infrastructure
-- **Virtual Network**: Isolated network for AVD resources
+- **Virtual Network**: Isolated network for AVD resources with dedicated subnets for session hosts and Azure AD DS
 - **Network Security Group**: Security rules for RDP and AVD traffic
-- **Subnet**: Dedicated subnet for session hosts
+- **Dedicated Subnets**: Separate subnets for session hosts and Azure AD Domain Services
 
 ### Security Configuration
 - **RBAC Roles**: 
@@ -35,8 +35,8 @@ This repository contains a complete Azure Virtual Desktop (AVD) demo environment
 ### Azure Requirements
 - Azure subscription with Owner or Contributor permissions
 - Azure AD tenant with Global Administrator permissions
-- Azure AD Domain Services enabled and configured
 - Sufficient quota for compute and storage resources
+- **Note**: Azure AD Domain Services will be automatically deployed as part of this solution
 
 ### Local Requirements
 - **Azure CLI**: Latest version installed
@@ -44,11 +44,11 @@ This repository contains a complete Azure Virtual Desktop (AVD) demo environment
 - **PowerShell** (for post-deployment configuration): v7.0 or later
 - **Git**: For repository cloning
 
-### Azure AD Domain Services Setup
-Before deploying, ensure Azure AD DS is configured:
-1. Enable Azure AD Domain Services in your tenant
-2. Configure DNS settings for your virtual network
-3. Note your domain name (e.g., contoso.com)
+### Azure AD Domain Services
+Azure AD Domain Services will be automatically deployed and configured as part of this solution. The deployment will:
+1. Create and configure Azure AD DS in your tenant
+2. Set up DNS settings for the virtual network
+3. Use a default domain name (configurable via parameters)
 
 ## Quick Start Deployment
 
@@ -64,7 +64,9 @@ azd init
 ```bash
 # Required settings
 azd env set AZURE_LOCATION "East US 2"
-azd env set AADDS_DOMAIN_NAME "contoso.com"  # Your Azure AD DS domain
+
+# Optional settings with defaults
+azd env set AADDS_DOMAIN_NAME "contoso.local"  # Domain name for Azure AD DS (will be created)
 
 # Optional settings with defaults
 azd env set AVD_ADMIN_USERNAME "avdadmin"
@@ -81,6 +83,7 @@ azd up
 When prompted, provide:
 - **Environment name**: A unique identifier (e.g., "avd-demo-001")
 - **VM Admin Password**: Secure password for session hosts (will be prompted securely)
+- **Domain Admin Password**: Password for the Azure AD DS domain admin account (will be prompted securely)
 
 ### 4. Post-Deployment Configuration
 The deployment automatically runs a post-provision script that:

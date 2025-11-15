@@ -11,8 +11,11 @@
     "winVMPassword": {
       "value": "${WIN_VM_PASSWORD}"
     },
+    "domainAdminPassword": {
+      "value": "${DOMAIN_ADMIN_PASSWORD}"
+    },
     "domainName": {
-      "value": "${AADDS_DOMAIN_NAME=contoso.com}"
+      "value": "${AADDS_DOMAIN_NAME=contoso.local}"
     },
     "adminUsername": {
       "value": "${AVD_ADMIN_USERNAME=avdadmin}"

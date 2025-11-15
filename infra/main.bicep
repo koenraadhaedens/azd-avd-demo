@@ -13,8 +13,12 @@ param location string
 @description('Password for the Windows VM')
 param winVMPassword string
 
+@secure()
+@description('Password for the Azure AD DS domain admin account')
+param domainAdminPassword string
+
 @description('Domain name for Azure AD Domain Services')
-param domainName string = 'contoso.com'
+param domainName string = 'contoso.local'
 
 @description('Admin username for session hosts')
 param adminUsername string = 'avdadmin'
@@ -49,6 +53,18 @@ module network './modules/network.bicep' = {
     location: location
     vnetAddressPrefix: vnetAddressPrefix
     subnetAddressPrefix: subnetAddressPrefix
+    tags: tags
+  }
+}
+
+// Deploy Azure AD Domain Services
+module aadds './modules/aad-domain-services.bicep' = {
+  scope: rg
+  params: {
+    environmentName: environmentName
+    location: location
+    domainName: domainName
+    subnetId: network.outputs.aaddsSubnetId
     tags: tags
   }
 }
@@ -92,6 +108,7 @@ module sessionHosts './modules/session-hosts.bicep' = {
     adminUsername: adminUsername
     adminPassword: winVMPassword
     domainName: domainName
+    domainAdminPassword: domainAdminPassword
     subnetId: network.outputs.subnetId
     hostPoolToken: avdCore.outputs.hostPoolToken
     sessionHostCount: sessionHostCount
@@ -111,8 +128,11 @@ output fslogixFileShareName string = fslogixStorage.outputs.fileShareName
 output appAttachStorageAccountName string = appAttachStorage.outputs.storageAccountName
 output appAttachFileShareName string = appAttachStorage.outputs.fileShareName
 output sessionHostNames array = sessionHosts.outputs.sessionHostNames
+output domainName string = aadds.outputs.domainName
+output aaddsDomainGuid string = aadds.outputs.domainGuid
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName
 output AZURE_APP_ATTACH_STORAGE_ACCOUNT_NAME string = appAttachStorage.outputs.storageAccountName
+output AZURE_DOMAIN_NAME string = aadds.outputs.domainName
 

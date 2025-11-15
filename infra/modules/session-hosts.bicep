@@ -30,6 +30,13 @@ param fslogixStorageAccountName string
 @description('FSLogix file share name')
 param fslogixFileShareName string
 
+@description('Azure AD DS domain admin username')
+param domainAdminUsername string = 'aaddsadmin@${domainName}'
+
+@secure()
+@description('Azure AD DS domain admin password')
+param domainAdminPassword string
+
 @description('Resource tags')
 param tags object
 
@@ -98,11 +105,37 @@ resource networkInterfaces 'Microsoft.Network/networkInterfaces@2023-09-01' = [f
   }
 }]
 
+// Domain join extension
+resource domainJoin 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = [for i in range(0, sessionHostCount): {
+  name: 'DomainJoin'
+  parent: sessionHosts[i]
+  location: location
+  properties: {
+    publisher: 'Microsoft.Compute'
+    type: 'JsonADDomainExtension'
+    typeHandlerVersion: '1.3'
+    autoUpgradeMinorVersion: true
+    settings: {
+      Name: domainName
+      OUPath: ''
+      User: domainAdminUsername
+      Restart: 'true'
+      Options: '3'
+    }
+    protectedSettings: {
+      Password: domainAdminPassword
+    }
+  }
+}]
+
 // Install AVD agents and configure FSLogix
 resource avdAgentInstall 'Microsoft.Compute/virtualMachines/extensions@2023-09-01' = [for i in range(0, sessionHostCount): {
   name: 'AVDAgentInstall'
   parent: sessionHosts[i]
   location: location
+  dependsOn: [
+    domainJoin[i]
+  ]
   properties: {
     publisher: 'Microsoft.Compute'
     type: 'CustomScriptExtension'
