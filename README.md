@@ -89,6 +89,16 @@ azd env set SESSION_HOST_COUNT "2"
 azd up
 ```
 
+**Note**: If the deployment fails during domain admin user creation due to permission issues, you may need to assign Azure AD roles to the managed identity:
+
+```powershell
+# Run this script to assign necessary Azure AD roles
+.\scripts\assign-managed-identity-roles.ps1
+
+# Then retry the deployment
+azd up
+```
+
 When prompted, provide:
 - **Environment name**: A unique identifier (e.g., "avd-demo-001")
 - **VM Admin Password**: Secure password for session hosts (will be prompted securely)

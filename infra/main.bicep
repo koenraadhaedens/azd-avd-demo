@@ -63,6 +63,16 @@ module network './modules/network.bicep' = {
   }
 }
 
+// Create User Assigned Managed Identity for deployment scripts
+module managedIdentity './modules/managed-identity.bicep' = {
+  scope: rg
+  params: {
+    environmentName: environmentName
+    location: location
+    tags: tags
+  }
+}
+
 // Create domain admin user in Azure AD before deploying Azure AD DS
 module createDomainAdmin './modules/create-domain-admin.bicep' = {
   scope: rg
@@ -72,6 +82,7 @@ module createDomainAdmin './modules/create-domain-admin.bicep' = {
     domainAdminUsername: domainAdminUsername
     domainAdminPassword: domainAdminPassword
     tenantDomain: tenantDomain
+    managedIdentityId: managedIdentity.outputs.identityId
     tags: tags
   }
 }
@@ -100,6 +111,7 @@ module waitForUserSync './modules/wait-for-user-sync.bicep' = {
     domainName: domainName
     domainAdminUPN: createDomainAdmin.outputs.domainAdminUPN
     aaddsResourceId: aadds.outputs.domainServicesId
+    managedIdentityId: managedIdentity.outputs.identityId
     tags: tags
   }
 }
@@ -175,6 +187,8 @@ output userSyncComplete string = waitForUserSync.outputs.userSyncComplete
 output domainAdminUserUPN string = createDomainAdmin.outputs.domainAdminUPN
 output domainAdminUserId string = createDomainAdmin.outputs.userId
 output domainAdminCreationStatus string = createDomainAdmin.outputs.status
+output managedIdentityId string = managedIdentity.outputs.identityId
+output managedIdentityPrincipalId string = managedIdentity.outputs.principalId
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName

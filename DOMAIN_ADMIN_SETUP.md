@@ -48,12 +48,14 @@ Azure AD Domain Services (Azure AD DS) is different from traditional on-premises
 ### Deployment Process
 
 1. **Network Infrastructure**: Virtual networks and subnets are deployed first
-2. **Domain Admin Creation**: `addomainadmin` user is created in Azure AD via deployment script
-3. **Azure AD DS Deployment**: Azure AD Domain Services is deployed with proper dependencies
-4. **User Synchronization Wait**: Deployment waits for the domain admin user to sync to Azure AD DS
-5. **AVD Infrastructure**: Host pools, workspaces, and storage accounts are deployed
-6. **Session Host Deployment**: VMs are deployed and joined to the domain using the pre-created domain admin
-7. **Post-Provision**: Groups are configured and the domain admin is added to AVD Admins group
+2. **Managed Identity Creation**: User Assigned Managed Identity is created for deployment scripts
+3. **Identity Role Assignment**: Azure AD roles are assigned to the managed identity (may require manual step)
+4. **Domain Admin Creation**: `addomainadmin` user is created in Azure AD via deployment script using the managed identity
+5. **Azure AD DS Deployment**: Azure AD Domain Services is deployed with proper dependencies
+6. **User Synchronization Wait**: Deployment waits for the domain admin user to sync to Azure AD DS
+7. **AVD Infrastructure**: Host pools, workspaces, and storage accounts are deployed
+8. **Session Host Deployment**: VMs are deployed and joined to the domain using the pre-created domain admin
+9. **Post-Provision**: Groups are configured and the domain admin is added to AVD Admins group
 
 ### Security Considerations
 
@@ -67,9 +69,18 @@ Azure AD Domain Services (Azure AD DS) is different from traditional on-premises
 
 ### During Deployment
 
-The domain admin user is automatically created during the infrastructure deployment phase using a deployment script. The password is securely generated and the user is ready for domain join operations.
+The domain admin user is automatically created during the infrastructure deployment phase using a deployment script with a User Assigned Managed Identity.
 
-**Important**: The deployment script creates the user, but the password is generated securely within the deployment. You'll need to reset the password after deployment if you need to use this account interactively.
+**Important Steps:**
+
+1. **First Deployment**: The infrastructure deploys the managed identity and attempts user creation
+2. **Role Assignment**: If user creation fails due to permissions, run the role assignment script:
+   ```powershell
+   .\scripts\assign-managed-identity-roles.ps1
+   ```
+3. **Retry Deployment**: After role assignment, the deployment can be retried and should succeed
+
+The password is generated securely within the deployment script. You'll need to reset the password after deployment if you need to use this account interactively.
 
 ### Post-Deployment Configuration
 

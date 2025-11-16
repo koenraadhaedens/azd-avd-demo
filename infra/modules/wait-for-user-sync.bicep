@@ -16,6 +16,9 @@ param domainAdminUPN string
 @description('Azure AD DS resource ID to check status')
 param aaddsResourceId string
 
+@description('User Assigned Managed Identity ID for the deployment script')
+param managedIdentityId string
+
 // Wait for Azure AD DS to be ready and user to be synchronized
 resource waitForUserSync 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   name: 'wait-for-user-sync-${environmentName}'
@@ -23,7 +26,10 @@ resource waitForUserSync 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   tags: tags
   kind: 'AzurePowerShell'
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentityId}': {}
+    }
   }
   properties: {
     azPowerShellVersion: '11.0'

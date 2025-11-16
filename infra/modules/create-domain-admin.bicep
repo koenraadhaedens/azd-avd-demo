@@ -17,6 +17,9 @@ param domainAdminPassword string
 @description('Tenant domain for creating the UPN')
 param tenantDomain string
 
+@description('User Assigned Managed Identity ID for the deployment script')
+param managedIdentityId string
+
 // Create a deployment script to create the Azure AD user
 resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   name: 'create-domain-admin-${environmentName}'
@@ -25,6 +28,9 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
   kind: 'AzurePowerShell'
   identity: {
     type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentityId}': {}
+    }
   }
   properties: {
     azPowerShellVersion: '11.0'
@@ -41,11 +47,10 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
       Write-Output "Domain Admin Username: $DomainAdminUsername"
       Write-Output "Tenant Domain: $TenantDomain"
 
-      # Create the domain admin user using Azure PowerShell
+      # Create the domain admin user using Azure PowerShell with User Assigned Managed Identity
       $userPrincipalName = "$DomainAdminUsername@$TenantDomain"
       
       try {
-        # Check if user already exists
         Write-Output "Checking if user already exists: $userPrincipalName"
         $existingUser = Get-AzADUser -Filter "userPrincipalName eq '$userPrincipalName'" -ErrorAction SilentlyContinue
         
@@ -68,6 +73,7 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
             AccountEnabled = $true
           }
           
+          Write-Output "Creating user with parameters..."
           $user = New-AzADUser @userParams
           
           if ($user) {
@@ -75,8 +81,16 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
             Write-Output "User ID: $($user.Id)"
             
             # Wait for user propagation across Azure AD
-            Write-Output "Waiting for user propagation..."
+            Write-Output "Waiting for user propagation (60 seconds)..."
             Start-Sleep -Seconds 60
+            
+            # Verify the user was created
+            $verifyUser = Get-AzADUser -UserPrincipalName $userPrincipalName -ErrorAction SilentlyContinue
+            if ($verifyUser) {
+              Write-Output "✓ User verification successful"
+            } else {
+              Write-Output "⚠ User verification failed, but creation succeeded"
+            }
             
             $DeploymentScriptOutputs = @{
               userId = $user.Id
@@ -85,7 +99,7 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
             }
           }
           else {
-            Write-Output "✗ Failed to create user"
+            Write-Output "✗ User creation returned null"
             $DeploymentScriptOutputs = @{
               userId = ""
               userPrincipalName = ""
@@ -108,6 +122,9 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
       catch {
         Write-Output "✗ Error during user creation: $($_.Exception.Message)"
         Write-Output "Error Details: $($_.Exception.ToString())"
+        Write-Output "PowerShell Version: $($PSVersionTable.PSVersion)"
+        Write-Output "Available Modules:"
+        Get-Module -ListAvailable | Where-Object { $_.Name -like "*Az*" } | ForEach-Object { Write-Output "  $($_.Name) $($_.Version)" }
         
         $DeploymentScriptOutputs = @{
           userId = ""
