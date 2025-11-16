@@ -36,16 +36,34 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
     azPowerShellVersion: '11.0'
     timeout: 'PT30M'
     retentionInterval: 'PT1H'
+    environmentVariables: [
+      {
+        name: 'DOMAIN_ADMIN_PASSWORD'
+        secureValue: domainAdminPassword
+      }
+    ]
     scriptContent: '''
       param(
         [string]$DomainAdminUsername,
-        [string]$DomainAdminPassword,
         [string]$TenantDomain
       )
 
       Write-Output "Starting domain admin user creation process..."
       Write-Output "Domain Admin Username: $DomainAdminUsername"
       Write-Output "Tenant Domain: $TenantDomain"
+
+      # Get the password from environment variable (more secure and avoids command-line parsing issues)
+      $DomainAdminPassword = $env:DOMAIN_ADMIN_PASSWORD
+      if (-not $DomainAdminPassword) {
+        Write-Output "✗ Domain admin password not found in environment variables"
+        $DeploymentScriptOutputs = @{
+          userId = ""
+          userPrincipalName = ""
+          status = "failed"
+          error = "Password not found in environment variables"
+        }
+        return
+      }
 
       # Create the domain admin user using Azure PowerShell with User Assigned Managed Identity
       $userPrincipalName = "$DomainAdminUsername@$TenantDomain"
@@ -136,7 +154,7 @@ resource createDomainAdminScript 'Microsoft.Resources/deploymentScripts@2023-08-
       
       Write-Output "Domain admin user process completed with status: $($DeploymentScriptOutputs.status)"
     '''
-    arguments: '-DomainAdminUsername ${domainAdminUsername} -DomainAdminPassword ${domainAdminPassword} -TenantDomain ${tenantDomain}'
+    arguments: '-DomainAdminUsername ${domainAdminUsername} -TenantDomain ${tenantDomain}'
   }
 }
 

@@ -104,6 +104,11 @@ When prompted, provide:
 - **VM Admin Password**: Secure password for session hosts (will be prompted securely)
 - **Domain Admin Password**: Password for the Azure AD DS domain admin account (will be prompted securely)
 
+**Password Requirements**: Use passwords that avoid PowerShell special characters. You can validate your password with:
+```powershell
+.\scripts\validate-password.ps1 -TestPassword "YourPassword123!"
+```
+
 The deployment will automatically:
 1. Create the `addomainadmin` user in Azure AD using the provided credentials
 2. Wait for the user to synchronize to Azure AD Domain Services

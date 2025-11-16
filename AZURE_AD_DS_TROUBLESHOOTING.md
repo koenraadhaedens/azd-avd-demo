@@ -23,9 +23,11 @@ This error typically occurs due to one of the following reasons:
 - **Issue**: Azure AD tenant doesn't support Azure AD DS or has conflicting configurations
 - **Solution**: Check tenant requirements and existing domain services
 
-#### **Cause: Resource Quotas**
-- **Issue**: Insufficient compute or network quotas in the target region
-- **Solution**: Check and request quota increases if needed
+#### **Cause: Password Contains Special Characters**
+- **Issue**: Deployment script fails with "The term 'XXXms' is not recognized" or similar PowerShell command errors
+- **Symptom**: Password contains characters or sequences that PowerShell interprets as commands (e.g., `&`, `1235ms`)
+- **Solution**: The deployment scripts now use environment variables instead of command-line arguments to avoid this issue
+- **Immediate Fix**: If using an older version, either update to the latest templates or use a simpler password for deployment, then change it afterward
 
 ### 2. Domain Creation Timeout
 

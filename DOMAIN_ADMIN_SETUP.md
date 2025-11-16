@@ -184,6 +184,12 @@ Common issues and quick fixes:
   Set-AzADUser -UserPrincipalName $userPrincipalName -Password $newPassword
   ```
 
+#### Password Complexity Issues
+- **Issue**: Deployment fails with PowerShell command not found errors (e.g., "The term '1235ms' is not recognized")
+- **Cause**: Password contains special characters that PowerShell interprets as commands
+- **Solution**: The deployment script now uses environment variables instead of command-line arguments to avoid this issue
+- **Prevention**: Use passwords that don't contain sequences that look like PowerShell commands or time measurements (e.g., avoid `123ms`, `&command`, etc.)
+
 ### Deployment Script Issues
 
 #### Managed Identity Permissions
