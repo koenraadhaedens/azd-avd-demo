@@ -29,22 +29,32 @@ This deployment has been modified to work with a manually configured Active Dire
 Before running `azd up`, set the following environment variables:
 
 ```bash
-# Required - Domain join credentials
-azd env set DOMAIN_JOIN_USERNAME "your-domain\\username"
+# Required - Domain join credentials (domain will be auto-detected from username)
+azd env set DOMAIN_JOIN_USERNAME "your-domain\\username"  # or "username@domain.com"
 azd env set DOMAIN_JOIN_PASSWORD "your-password"
-
-# Required - Domain configuration
-azd env set DOMAIN_NAME "yourdomain.local"
 
 # Standard deployment variables
 azd env set WIN_VM_PASSWORD "your-vm-password"
 azd env set AZURE_LOCATION "East US 2"
 ```
 
+**Note**: The domain name is automatically extracted from the `DOMAIN_JOIN_USERNAME`. You can use either:
+- Domain\\Username format: `CONTOSO\\avdjoin` → extracts "CONTOSO"
+- UPN format: `avdjoin@contoso.local` → extracts "contoso.local"
+
+**Examples:**
+- `azd env set DOMAIN_JOIN_USERNAME "CONTOSO\\svc-avdjoin"`
+- `azd env set DOMAIN_JOIN_USERNAME "avdjoin@corp.company.com"`
+- `azd env set DOMAIN_JOIN_USERNAME "company\\domainjoin"`
+
 ## Deployment Steps
 
 1. **Verify Prerequisites**
    - Confirm your domain is accessible
+   - Test domain extraction logic:
+   ```powershell
+   .\scripts\test-domain-extraction.ps1 -Username "CONTOSO\avdjoin"
+   ```
    - Test domain join credentials using the validation script:
    ```powershell
    .\scripts\validate-domain-credentials.ps1 -DomainName "contoso.local" -Username "contoso\avdjoin" -Password "YourPassword"
@@ -53,9 +63,8 @@ azd env set AZURE_LOCATION "East US 2"
 
 2. **Set Environment Variables**
    ```bash
-   azd env set DOMAIN_JOIN_USERNAME "yourdomain\\avdjoin"
+   azd env set DOMAIN_JOIN_USERNAME "yourdomain\\avdjoin"  # Domain auto-detected
    azd env set DOMAIN_JOIN_PASSWORD "SecurePassword123!"
-   azd env set DOMAIN_NAME "contoso.local"
    azd env set WIN_VM_PASSWORD "VMPassword123!"
    ```
 

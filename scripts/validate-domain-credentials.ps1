@@ -93,4 +93,5 @@ Write-Host ""
 Write-Host "To set environment variables for deployment:" -ForegroundColor Cyan
 Write-Host "  azd env set DOMAIN_JOIN_USERNAME `"$Username`"" -ForegroundColor White
 Write-Host "  azd env set DOMAIN_JOIN_PASSWORD `"$Password`"" -ForegroundColor White
-Write-Host "  azd env set DOMAIN_NAME `"$DomainName`"" -ForegroundColor White
+Write-Host ""
+Write-Host "Note: Domain name will be automatically extracted from the username" -ForegroundColor Yellow

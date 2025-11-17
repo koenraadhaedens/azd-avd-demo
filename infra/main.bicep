@@ -13,9 +13,6 @@ param location string
 @description('Password for the Windows VM')
 param winVMPassword string
 
-@description('Domain name (must already exist and be configured)')
-param domainName string = 'contoso.local'
-
 @description('Domain join username (must already exist and have rights to join computers to domain)')
 param domainJoinUsername string
 
@@ -25,6 +22,10 @@ param domainJoinPassword string
 
 @description('Admin username for session hosts')
 param adminUsername string = 'localadmin'
+
+// Extract domain name from the domain join username
+var domainFromUsername = contains(domainJoinUsername, '\\') ? split(domainJoinUsername, '\\')[0] : contains(domainJoinUsername, '@') ? split(domainJoinUsername, '@')[1] : ''
+var domainName = !empty(domainFromUsername) ? domainFromUsername : 'contoso.local'
 
 @description('Virtual network address prefix')
 param vnetAddressPrefix string = '10.0.0.0/16'
@@ -129,6 +130,8 @@ output appAttachStorageAccountName string = appAttachStorage.outputs.storageAcco
 output appAttachFileShareName string = appAttachStorage.outputs.fileShareName
 output sessionHostNames array = sessionHosts.outputs.sessionHostNames
 output domainName string = domainName
+output domainJoinUsername string = domainJoinUsername
+output extractedDomain string = domainFromUsername
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName

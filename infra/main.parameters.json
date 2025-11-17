@@ -11,9 +11,6 @@
     "winVMPassword": {
       "value": "${WIN_VM_PASSWORD}"
     },
-    "domainName": {
-      "value": "${DOMAIN_NAME=contoso.local}"
-    },
     "domainJoinUsername": {
       "value": "${DOMAIN_JOIN_USERNAME}"
     },
