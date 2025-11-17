@@ -27,10 +27,10 @@
       "value": "${AVD_ADMIN_USERNAME=localadmin}"
     },
     "vnetAddressPrefix": {
-      "value": "${VNET_ADDRESS_PREFIX=10.0.0.0/16}"
+      "value": "${VNET_ADDRESS_PREFIX=10.38.0.0/16}"
     },
     "subnetAddressPrefix": {
-      "value": "${SUBNET_ADDRESS_PREFIX=10.0.1.0/24}"
+      "value": "${SUBNET_ADDRESS_PREFIX=10.38.1.0/24}"
     },
     "sessionHostCount": {
       "value": "${SESSION_HOST_COUNT=2}"
