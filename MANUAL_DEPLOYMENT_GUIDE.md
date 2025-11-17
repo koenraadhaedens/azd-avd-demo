@@ -4,7 +4,12 @@ This deployment has been modified to work with a manually configured Active Dire
 
 ## Prerequisites
 
-### 1. Active Directory Domain Services
+### 1. Azure Permissions
+- **AVD Subscription**: Owner or Contributor permissions for deploying AVD resources
+- **Domain Controller VNet**: Network Contributor permissions on the VNet where domain controller is located
+- **Cross-Subscription**: If domain controller is in a different subscription, ensure appropriate permissions
+
+### 2. Active Directory Domain Services
 - You must have an existing ADDS environment (on-premises or Azure-based)
 - The domain must be accessible from Azure Virtual Networks
 - DNS resolution must be properly configured
@@ -22,6 +27,9 @@ This deployment has been modified to work with a manually configured Active Dire
 ### 3. Network Connectivity
 - Ensure network connectivity between Azure VNet and your domain controllers
 - **DNS Server IP**: You must know the IP address of your domain controller/DNS server
+- **Domain Controller VNet**: You must know the resource ID of the VNet where your domain controller is located
+- **Network Peering**: Both forward and reverse VNet peering will be automatically created
+- **Permissions**: Ensure you have Network Contributor access to the domain controller VNet
 - Configure DNS settings to point to your domain controllers
 - Open required ports for domain communication (TCP 88, 135, 139, 389, 445, 464, 636, 3268, 3269; UDP 53, 88, 123, 389, 464)
 
@@ -36,6 +44,9 @@ azd env set DOMAIN_JOIN_PASSWORD "your-password"
 
 # Required - DNS server for domain resolution
 azd env set DNS_SERVER_IP "192.168.1.10"  # IP of your domain controller
+
+# Required - VNet where domain controller is located
+azd env set DOMAIN_CONTROLLER_VNET_ID "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/rg-domain/providers/Microsoft.Network/virtualNetworks/vnet-domain"
 
 # Standard deployment variables
 azd env set WIN_VM_PASSWORD "your-vm-password"
@@ -52,6 +63,7 @@ azd env set AZURE_LOCATION "East US 2"
 - `azd env set DOMAIN_JOIN_USERNAME "company\\domainjoin"`
 - `azd env set DNS_SERVER_IP "10.0.0.4"`  # On-premises DC
 - `azd env set DNS_SERVER_IP "192.168.1.10"`  # Local network DC
+- `azd env set DOMAIN_CONTROLLER_VNET_ID "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/rg-domain/providers/Microsoft.Network/virtualNetworks/vnet-domain"`
 
 ## Deployment Steps
 
@@ -60,6 +72,10 @@ azd env set AZURE_LOCATION "East US 2"
    - Identify your DNS server IP address:
    ```powershell
    .\scripts\detect-dns-server.ps1 -DomainName "contoso.local"
+   ```
+   - Find your domain controller VNet resource ID:
+   ```powershell
+   .\scripts\get-vnet-info.ps1 -DnsServerIp "192.168.1.10"
    ```
    - Test domain extraction logic:
    ```powershell
@@ -76,6 +92,7 @@ azd env set AZURE_LOCATION "East US 2"
    azd env set DOMAIN_JOIN_USERNAME "yourdomain\\avdjoin"  # Domain auto-detected
    azd env set DOMAIN_JOIN_PASSWORD "SecurePassword123!"
    azd env set DNS_SERVER_IP "192.168.1.10"  # Your domain controller IP
+   azd env set DOMAIN_CONTROLLER_VNET_ID "/subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/vnet-domain"
    azd env set WIN_VM_PASSWORD "VMPassword123!"
    ```
 
@@ -83,10 +100,25 @@ azd env set AZURE_LOCATION "East US 2"
    ```bash
    azd up
    ```
+   The deployment will automatically:
+   - Create AVD VNet with custom DNS configuration
+   - Set up forward VNet peering (AVD → Domain Controller)
+   - Set up reverse VNet peering (Domain Controller → AVD)
+   - Deploy session hosts and join them to the domain
 
-## Post-Deployment Configuration
+4. **Validate Deployment (Recommended)**
+   ```powershell
+   .\scripts\validate-deployment.ps1 -EnvironmentName "your-azd-env-name"
+   ```
 
-### 1. Verify Domain Join
+## Post-Deployment Verification
+
+### 1. Verify Network Connectivity
+- Check VNet peering status in Azure Portal
+- Verify deployment output shows `vnetPeeringStatus: Connected`
+- Test DNS resolution from AVD VNet to domain
+
+### 2. Verify Domain Join
 - Check that session hosts successfully joined the domain
 - Verify they appear in the correct OU (default: Computers container)
 
@@ -121,9 +153,19 @@ azd env set AZURE_LOCATION "East US 2"
   - **Solution**: Verify DNS server IP is correct and accessible from Azure VNet
   - **Solution**: Check that DNS server can resolve the domain name
   
-- **Error**: DNS resolution timeout
-  - **Solution**: Verify network connectivity to DNS server IP
-  - **Solution**: Check if DNS server is responding on port 53
+### VNet Peering Issues
+- **Error**: "Address space overlaps"
+  - **Solution**: Ensure AVD VNet address space doesn't overlap with domain controller VNet
+  - **Solution**: Modify `VNET_ADDRESS_PREFIX` parameter (default: 10.0.0.0/16)
+
+- **Error**: "Insufficient permissions" on reverse peering
+  - **Solution**: Ensure you have Network Contributor role on the domain controller VNet
+  - **Solution**: Grant permissions before running deployment: `azd up`
+
+- **Error**: Peering shows "Disconnected" state
+  - **Solution**: Check that both peerings are created automatically during deployment
+  - **Solution**: Verify no network policies are blocking the connection
+  - **Solution**: Check deployment outputs for `vnetPeeringStatus`
 
 ## Security Considerations
 
@@ -145,5 +187,6 @@ The simplified architecture focuses on:
 - AVD infrastructure (host pools, workspaces, application groups)
 - Session host VMs with domain join
 - **Custom DNS configuration**: VNet configured with your domain controller's IP
+- **Automatic VNet peering**: Bidirectional peering between AVD VNet and domain controller VNet
 - Storage accounts for FSLogix and App Attach
 - Network infrastructure with domain-aware DNS settings

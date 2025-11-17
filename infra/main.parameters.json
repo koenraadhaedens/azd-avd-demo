@@ -20,6 +20,9 @@
     "dnsServerIp": {
       "value": "${DNS_SERVER_IP}"
     },
+    "domainControllerVnetId": {
+      "value": "${DOMAIN_CONTROLLER_VNET_ID}"
+    },
     "adminUsername": {
       "value": "${AVD_ADMIN_USERNAME=localadmin}"
     },

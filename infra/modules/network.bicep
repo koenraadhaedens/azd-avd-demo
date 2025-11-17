@@ -13,6 +13,9 @@ param subnetAddressPrefix string
 @description('DNS server IP address for domain resolution')
 param dnsServerIp string
 
+@description('Resource ID of the existing VNet where the domain controller is located')
+param domainControllerVnetId string
+
 @description('Resource tags')
 param tags object
 
@@ -85,6 +88,21 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-09-01' = {
         }
       }
     ]
+  }
+}
+
+// VNet Peering to Domain Controller VNet
+resource vnetPeeringToDC 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-09-01' = {
+  parent: vnet
+  name: 'peer-to-dc-vnet'
+  properties: {
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: true
+    allowGatewayTransit: false
+    useRemoteGateways: false
+    remoteVirtualNetwork: {
+      id: domainControllerVnetId
+    }
   }
 }
 

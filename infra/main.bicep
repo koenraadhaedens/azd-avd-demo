@@ -26,6 +26,9 @@ param adminUsername string = 'localadmin'
 @description('DNS server IP address for domain resolution (IP of your domain controller)')
 param dnsServerIp string
 
+@description('Resource ID of the existing VNet where the domain controller/DNS server is located')
+param domainControllerVnetId string
+
 // Extract domain name from the domain join username
 var domainFromUsername = contains(domainJoinUsername, '\\') ? split(domainJoinUsername, '\\')[0] : contains(domainJoinUsername, '@') ? split(domainJoinUsername, '@')[1] : ''
 var domainName = !empty(domainFromUsername) ? domainFromUsername : 'contoso.local'
@@ -61,17 +64,24 @@ module network './modules/network.bicep' = {
     vnetAddressPrefix: vnetAddressPrefix
     subnetAddressPrefix: subnetAddressPrefix
     dnsServerIp: dnsServerIp
+    domainControllerVnetId: domainControllerVnetId
     tags: tags
   }
 }
 
+// Extract domain controller VNet details for reverse peering
+var dcVnetIdParts = split(domainControllerVnetId, '/')
+var dcSubscriptionId = dcVnetIdParts[2]
+var dcResourceGroupName = dcVnetIdParts[4]
 
-
-
-
-
-
-
+// Deploy reverse VNet peering from domain controller VNet to AVD VNet
+module reversePeering './modules/reverse-peering.bicep' = {
+  scope: resourceGroup(dcSubscriptionId, dcResourceGroupName)
+  params: {
+    domainControllerVnetId: domainControllerVnetId
+    avdVnetId: network.outputs.vnetId
+  }
+}
 
 // Deploy FSLogix storage account
 module fslogixStorage './modules/storage-fslogix.bicep' = {
@@ -121,6 +131,9 @@ module sessionHosts './modules/session-hosts.bicep' = {
     fslogixFileShareName: fslogixStorage.outputs.fileShareName
     tags: tags
   }
+  dependsOn: [
+    reversePeering
+  ]
 }
 
 // Output important information for post-deployment configuration
@@ -137,6 +150,9 @@ output domainName string = domainName
 output domainJoinUsername string = domainJoinUsername
 output extractedDomain string = domainFromUsername
 output dnsServerIp string = dnsServerIp
+output domainControllerVnetId string = domainControllerVnetId
+output avdVnetId string = network.outputs.vnetId
+output vnetPeeringStatus string = reversePeering.outputs.peeringState
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName
