@@ -1,11 +1,17 @@
 # Azure Virtual Desktop Demo Environment
 
+> **🚀 Manual ADDS Deployment**: If you want to use an existing Active Directory Domain Services environment instead of Azure AD DS, see the [MANUAL_DEPLOYMENT_GUIDE.md](./MANUAL_DEPLOYMENT_GUIDE.md) for instructions.
+
 > **🚀 Quick Start**: If you're having deployment issues, check the [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for troubleshooting and manual configuration steps.
 
 > **🚨 Azure AD DS Issues**: If you encounter "managed domain is in a failed state", see [AZURE_AD_DS_TROUBLESHOOTING.md](./AZURE_AD_DS_TROUBLESHOOTING.md) and run `.\scripts\diagnose-aadds.ps1` for diagnostics.
 
 ## Overview
 This repository contains a complete Azure Virtual Desktop (AVD) demo environment deployed using Azure Developer CLI (azd) and Bicep templates. The solution provides a production-ready AVD infrastructure with FSLogix profiles, App Attach capabilities, and proper security configuration.
+
+**Two deployment options are available:**
+1. **Automatic Azure AD DS**: Automatically deploys Azure AD Domain Services (original version)
+2. **Manual ADDS**: Use your existing Active Directory Domain Services environment ([Manual Deployment Guide](./MANUAL_DEPLOYMENT_GUIDE.md))
 
 ## Architecture Components
 

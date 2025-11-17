@@ -10,9 +10,6 @@ param vnetAddressPrefix string
 @description('Subnet address prefix for session hosts')
 param subnetAddressPrefix string
 
-@description('Subnet address prefix for Azure AD DS')
-param aaddsSubnetAddressPrefix string = '10.0.2.0/24'
-
 @description('Resource tags')
 param tags object
 
@@ -35,12 +32,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
           networkSecurityGroup: {
             id: nsg.id
           }
-        }
-      }
-      {
-        name: 'snet-aadds'
-        properties: {
-          addressPrefix: aaddsSubnetAddressPrefix
         }
       }
     ]
@@ -91,7 +82,5 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-09-01' = {
 
 output vnetId string = vnet.id
 output subnetId string = vnet.properties.subnets[0].id
-output aaddsSubnetId string = vnet.properties.subnets[1].id
 output vnetName string = vnet.name
 output subnetName string = vnet.properties.subnets[0].name
-output aaddsSubnetName string = vnet.properties.subnets[1].name

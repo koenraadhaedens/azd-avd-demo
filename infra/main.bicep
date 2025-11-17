@@ -13,21 +13,18 @@ param location string
 @description('Password for the Windows VM')
 param winVMPassword string
 
-@secure()
-@description('Password for the Azure AD DS domain admin account')
-param domainAdminPassword string
-
-@description('Domain name for Azure AD Domain Services')
+@description('Domain name (must already exist and be configured)')
 param domainName string = 'contoso.local'
 
-@description('Domain admin username (will be created in Azure AD and synced to Azure AD DS)')
-param domainAdminUsername string = 'addomainadmin'
+@description('Domain join username (must already exist and have rights to join computers to domain)')
+param domainJoinUsername string
+
+@secure()
+@description('Password for the domain join user account')
+param domainJoinPassword string
 
 @description('Admin username for session hosts')
-param adminUsername string = 'addomainadmin'
-
-@description('Tenant domain for creating user UPN (e.g., contoso.onmicrosoft.com)')
-param tenantDomain string
+param adminUsername string = 'localadmin'
 
 @description('Virtual network address prefix')
 param vnetAddressPrefix string = '10.0.0.0/16'
@@ -63,58 +60,13 @@ module network './modules/network.bicep' = {
   }
 }
 
-// Create User Assigned Managed Identity for deployment scripts
-module managedIdentity './modules/managed-identity.bicep' = {
-  scope: rg
-  params: {
-    environmentName: environmentName
-    location: location
-    tags: tags
-  }
-}
 
-// Create domain admin user in Azure AD before deploying Azure AD DS
-module createDomainAdmin './modules/create-domain-admin.bicep' = {
-  scope: rg
-  params: {
-    environmentName: environmentName
-    location: location
-    domainAdminUsername: domainAdminUsername
-    domainAdminPassword: domainAdminPassword
-    tenantDomain: tenantDomain
-    managedIdentityId: managedIdentity.outputs.identityId
-    tags: tags
-  }
-}
 
-// Deploy Azure AD Domain Services
-module aadds './modules/aad-domain-services.bicep' = {
-  scope: rg
-  params: {
-    environmentName: environmentName
-    location: location
-    domainName: domainName
-    subnetId: network.outputs.aaddsSubnetId
-    tags: tags
-  }
-  dependsOn: [
-    createDomainAdmin
-  ]
-}
 
-// Wait for Azure AD DS to be fully operational and user sync to complete before proceeding
-module waitForUserSync './modules/wait-for-user-sync.bicep' = {
-  scope: rg
-  params: {
-    environmentName: environmentName
-    location: location
-    domainName: domainName
-    domainAdminUPN: createDomainAdmin.outputs.domainAdminUPN
-    aaddsResourceId: aadds.outputs.domainServicesId
-    managedIdentityId: managedIdentity.outputs.identityId
-    tags: tags
-  }
-}
+
+
+
+
 
 // Deploy FSLogix storage account
 module fslogixStorage './modules/storage-fslogix.bicep' = {
@@ -155,8 +107,8 @@ module sessionHosts './modules/session-hosts.bicep' = {
     adminUsername: adminUsername
     adminPassword: winVMPassword
     domainName: domainName
-    domainAdminUsername: createDomainAdmin.outputs.domainAdminUPN
-    domainAdminPassword: domainAdminPassword
+    domainJoinUsername: domainJoinUsername
+    domainJoinPassword: domainJoinPassword
     subnetId: network.outputs.subnetId
     hostPoolToken: avdCore.outputs.hostPoolToken
     sessionHostCount: sessionHostCount
@@ -164,9 +116,6 @@ module sessionHosts './modules/session-hosts.bicep' = {
     fslogixFileShareName: fslogixStorage.outputs.fileShareName
     tags: tags
   }
-  dependsOn: [
-    waitForUserSync
-  ]
 }
 
 // Output important information for post-deployment configuration
@@ -179,19 +128,10 @@ output fslogixFileShareName string = fslogixStorage.outputs.fileShareName
 output appAttachStorageAccountName string = appAttachStorage.outputs.storageAccountName
 output appAttachFileShareName string = appAttachStorage.outputs.fileShareName
 output sessionHostNames array = sessionHosts.outputs.sessionHostNames
-output domainName string = aadds.outputs.domainName
-output aaddsDomainGuid string = aadds.outputs.domainGuid
-output aaddsReadyStatus string = waitForUserSync.outputs.status
-output aaddsReadyTime string = waitForUserSync.outputs.readyTime
-output userSyncComplete string = waitForUserSync.outputs.userSyncComplete
-output domainAdminUserUPN string = createDomainAdmin.outputs.domainAdminUPN
-output domainAdminUserId string = createDomainAdmin.outputs.userId
-output domainAdminCreationStatus string = createDomainAdmin.outputs.status
-output managedIdentityId string = managedIdentity.outputs.identityId
-output managedIdentityPrincipalId string = managedIdentity.outputs.principalId
+output domainName string = domainName
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName
 output AZURE_APP_ATTACH_STORAGE_ACCOUNT_NAME string = appAttachStorage.outputs.storageAccountName
-output AZURE_DOMAIN_NAME string = aadds.outputs.domainName
+output AZURE_DOMAIN_NAME string = domainName
 
