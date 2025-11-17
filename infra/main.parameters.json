@@ -17,6 +17,9 @@
     "domainJoinPassword": {
       "value": "${DOMAIN_JOIN_PASSWORD}"
     },
+    "dnsServerIp": {
+      "value": "${DNS_SERVER_IP}"
+    },
     "adminUsername": {
       "value": "${AVD_ADMIN_USERNAME=localadmin}"
     },

@@ -9,7 +9,10 @@ param(
     [string]$Username,
     
     [Parameter(Mandatory=$true)]
-    [string]$Password
+    [string]$Password,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$DnsServerIp
 )
 
 Write-Host "=== Domain Join Credentials Validation ===" -ForegroundColor Cyan
@@ -67,21 +70,44 @@ try {
 
 # Test 4: DNS resolution
 Write-Host "4. Testing DNS resolution for domain..." -ForegroundColor Yellow
-try {
-    $dnsResult = Resolve-DnsName $DomainName -ErrorAction Stop
-    Write-Host "   ✓ DNS resolution successful for '$DomainName'" -ForegroundColor Green
-    
-    # Try to resolve domain controllers
+
+# Test specific DNS server if provided
+if ($DnsServerIp) {
+    Write-Host "   Testing DNS server: $DnsServerIp" -ForegroundColor Cyan
     try {
-        $dcResult = Resolve-DnsName "_ldap._tcp.$DomainName" -Type SRV -ErrorAction Stop
-        Write-Host "   ✓ Found $($dcResult.Count) domain controller(s)" -ForegroundColor Green
+        $dnsResult = Resolve-DnsName $DomainName -Server $DnsServerIp -ErrorAction Stop
+        Write-Host "   ✓ DNS resolution successful using '$DnsServerIp'" -ForegroundColor Green
+        
+        # Test domain controller resolution via specific DNS server
+        try {
+            $dcResult = Resolve-DnsName "_ldap._tcp.$DomainName" -Type SRV -Server $DnsServerIp -ErrorAction Stop
+            Write-Host "   ✓ Found $($dcResult.Count) domain controller(s) via '$DnsServerIp'" -ForegroundColor Green
+        } catch {
+            Write-Host "   ⚠ Warning: Cannot resolve domain controllers via SRV record using '$DnsServerIp'" -ForegroundColor Yellow
+        }
+        
     } catch {
-        Write-Host "   ⚠ Warning: Cannot resolve domain controllers via SRV record" -ForegroundColor Yellow
+        Write-Host "   ✗ DNS resolution failed using server '$DnsServerIp'" -ForegroundColor Red
+        Write-Host "     Error: $($_.Exception.Message)" -ForegroundColor Red
     }
-    
-} catch {
-    Write-Host "   ✗ DNS resolution failed for '$DomainName'" -ForegroundColor Red
-    Write-Host "     Error: $($_.Exception.Message)" -ForegroundColor Red
+} else {
+    # Use system DNS
+    try {
+        $dnsResult = Resolve-DnsName $DomainName -ErrorAction Stop
+        Write-Host "   ✓ DNS resolution successful for '$DomainName' (using system DNS)" -ForegroundColor Green
+        
+        # Try to resolve domain controllers
+        try {
+            $dcResult = Resolve-DnsName "_ldap._tcp.$DomainName" -Type SRV -ErrorAction Stop
+            Write-Host "   ✓ Found $($dcResult.Count) domain controller(s)" -ForegroundColor Green
+        } catch {
+            Write-Host "   ⚠ Warning: Cannot resolve domain controllers via SRV record" -ForegroundColor Yellow
+        }
+        
+    } catch {
+        Write-Host "   ✗ DNS resolution failed for '$DomainName'" -ForegroundColor Red
+        Write-Host "     Error: $($_.Exception.Message)" -ForegroundColor Red
+    }
 }
 
 Write-Host ""
@@ -93,5 +119,8 @@ Write-Host ""
 Write-Host "To set environment variables for deployment:" -ForegroundColor Cyan
 Write-Host "  azd env set DOMAIN_JOIN_USERNAME `"$Username`"" -ForegroundColor White
 Write-Host "  azd env set DOMAIN_JOIN_PASSWORD `"$Password`"" -ForegroundColor White
+if ($DnsServerIp) {
+    Write-Host "  azd env set DNS_SERVER_IP `"$DnsServerIp`"" -ForegroundColor White
+}
 Write-Host ""
 Write-Host "Note: Domain name will be automatically extracted from the username" -ForegroundColor Yellow

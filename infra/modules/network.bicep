@@ -10,6 +10,9 @@ param vnetAddressPrefix string
 @description('Subnet address prefix for session hosts')
 param subnetAddressPrefix string
 
+@description('DNS server IP address for domain resolution')
+param dnsServerIp string
+
 @description('Resource tags')
 param tags object
 
@@ -22,6 +25,11 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
     addressSpace: {
       addressPrefixes: [
         vnetAddressPrefix
+      ]
+    }
+    dhcpOptions: {
+      dnsServers: [
+        dnsServerIp
       ]
     }
     subnets: [

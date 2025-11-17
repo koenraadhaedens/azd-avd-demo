@@ -23,6 +23,9 @@ param domainJoinPassword string
 @description('Admin username for session hosts')
 param adminUsername string = 'localadmin'
 
+@description('DNS server IP address for domain resolution (IP of your domain controller)')
+param dnsServerIp string
+
 // Extract domain name from the domain join username
 var domainFromUsername = contains(domainJoinUsername, '\\') ? split(domainJoinUsername, '\\')[0] : contains(domainJoinUsername, '@') ? split(domainJoinUsername, '@')[1] : ''
 var domainName = !empty(domainFromUsername) ? domainFromUsername : 'contoso.local'
@@ -57,6 +60,7 @@ module network './modules/network.bicep' = {
     location: location
     vnetAddressPrefix: vnetAddressPrefix
     subnetAddressPrefix: subnetAddressPrefix
+    dnsServerIp: dnsServerIp
     tags: tags
   }
 }
@@ -132,6 +136,7 @@ output sessionHostNames array = sessionHosts.outputs.sessionHostNames
 output domainName string = domainName
 output domainJoinUsername string = domainJoinUsername
 output extractedDomain string = domainFromUsername
+output dnsServerIp string = dnsServerIp
 
 // Additional outputs for azd environment variables
 output AZURE_FSLOGIX_STORAGE_ACCOUNT_NAME string = fslogixStorage.outputs.storageAccountName

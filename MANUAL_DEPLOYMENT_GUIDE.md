@@ -21,6 +21,7 @@ This deployment has been modified to work with a manually configured Active Dire
 
 ### 3. Network Connectivity
 - Ensure network connectivity between Azure VNet and your domain controllers
+- **DNS Server IP**: You must know the IP address of your domain controller/DNS server
 - Configure DNS settings to point to your domain controllers
 - Open required ports for domain communication (TCP 88, 135, 139, 389, 445, 464, 636, 3268, 3269; UDP 53, 88, 123, 389, 464)
 
@@ -32,6 +33,9 @@ Before running `azd up`, set the following environment variables:
 # Required - Domain join credentials (domain will be auto-detected from username)
 azd env set DOMAIN_JOIN_USERNAME "your-domain\\username"  # or "username@domain.com"
 azd env set DOMAIN_JOIN_PASSWORD "your-password"
+
+# Required - DNS server for domain resolution
+azd env set DNS_SERVER_IP "192.168.1.10"  # IP of your domain controller
 
 # Standard deployment variables
 azd env set WIN_VM_PASSWORD "your-vm-password"
@@ -46,18 +50,24 @@ azd env set AZURE_LOCATION "East US 2"
 - `azd env set DOMAIN_JOIN_USERNAME "CONTOSO\\svc-avdjoin"`
 - `azd env set DOMAIN_JOIN_USERNAME "avdjoin@corp.company.com"`
 - `azd env set DOMAIN_JOIN_USERNAME "company\\domainjoin"`
+- `azd env set DNS_SERVER_IP "10.0.0.4"`  # On-premises DC
+- `azd env set DNS_SERVER_IP "192.168.1.10"`  # Local network DC
 
 ## Deployment Steps
 
 1. **Verify Prerequisites**
    - Confirm your domain is accessible
+   - Identify your DNS server IP address:
+   ```powershell
+   .\scripts\detect-dns-server.ps1 -DomainName "contoso.local"
+   ```
    - Test domain extraction logic:
    ```powershell
    .\scripts\test-domain-extraction.ps1 -Username "CONTOSO\avdjoin"
    ```
    - Test domain join credentials using the validation script:
    ```powershell
-   .\scripts\validate-domain-credentials.ps1 -DomainName "contoso.local" -Username "contoso\avdjoin" -Password "YourPassword"
+   .\scripts\validate-domain-credentials.ps1 -DomainName "contoso.local" -Username "contoso\avdjoin" -Password "YourPassword" -DnsServerIp "192.168.1.10"
    ```
    - Verify DNS resolution
 
@@ -65,6 +75,7 @@ azd env set AZURE_LOCATION "East US 2"
    ```bash
    azd env set DOMAIN_JOIN_USERNAME "yourdomain\\avdjoin"  # Domain auto-detected
    azd env set DOMAIN_JOIN_PASSWORD "SecurePassword123!"
+   azd env set DNS_SERVER_IP "192.168.1.10"  # Your domain controller IP
    azd env set WIN_VM_PASSWORD "VMPassword123!"
    ```
 
@@ -101,8 +112,18 @@ azd env set AZURE_LOCATION "East US 2"
 
 ### Network Issues
 - Verify NSG rules allow domain traffic
-- Check DNS server configuration in VNet
+- **Check VNet DNS configuration**: Ensure DNS servers point to your domain controller
+- **Test DNS resolution**: Use `nslookup domain.com dns-server-ip` to verify
 - Test connectivity from Azure VMs to domain controllers
+
+### DNS Configuration Issues
+- **Error**: "The specified domain either does not exist or could not be contacted"
+  - **Solution**: Verify DNS server IP is correct and accessible from Azure VNet
+  - **Solution**: Check that DNS server can resolve the domain name
+  
+- **Error**: DNS resolution timeout
+  - **Solution**: Verify network connectivity to DNS server IP
+  - **Solution**: Check if DNS server is responding on port 53
 
 ## Security Considerations
 
@@ -123,5 +144,6 @@ This deployment removes the following components that were in the original Azure
 The simplified architecture focuses on:
 - AVD infrastructure (host pools, workspaces, application groups)
 - Session host VMs with domain join
+- **Custom DNS configuration**: VNet configured with your domain controller's IP
 - Storage accounts for FSLogix and App Attach
-- Network infrastructure
+- Network infrastructure with domain-aware DNS settings
