@@ -145,11 +145,11 @@ resource avdAgentInstall 'Microsoft.Compute/virtualMachines/extensions@2023-09-0
     autoUpgradeMinorVersion: true
     settings: {
       fileUris: [
-        'https://raw.githubusercontent.com/koenraadhaedens/azd-avd-demo/main/scripts/sessionhost/ConfigureSessionHost.ps1'
+        'https://raw.githubusercontent.com/koenraadhaedens/azd-avd-demo/main/scripts/sessionhost/ConfigureSessionHost_Simple.ps1'
       ]
     }
     protectedSettings: {
-      commandToExecute: 'powershell.exe -ExecutionPolicy Unrestricted -File ConfigureSessionHost.ps1 -HostPoolRegistrationToken "${hostPoolToken}" -StorageAccountName "${fslogixStorageAccountName}" -FileShareName "${fslogixFileShareName}" -DomainName "${domainName}"'
+      commandToExecute: 'powershell.exe -ExecutionPolicy Unrestricted -File ConfigureSessionHost_Simple.ps1 -HostPoolRegistrationToken "${hostPoolToken}" -StorageAccountName "${fslogixStorageAccountName}" -FileShareName "${fslogixFileShareName}" -DomainName "${domainName}"'
     }
   }
 }]
