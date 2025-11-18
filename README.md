@@ -153,50 +153,44 @@ Set-AzStorageFileContent -ShareName "appattach" -Source "C:\path\to\package.msix
 
 ## FSLogix Configuration with Azure AD DS
 
-This deployment configures FSLogix with Azure AD Domain Services authentication for seamless profile management. The configuration includes:
+This deployment automatically configures FSLogix with Azure AD Domain Services authentication for seamless profile management. The configuration includes:
 
 ### Automatic Setup
 The deployment automatically:
 - Enables Azure AD DS authentication on the FSLogix storage account
-- Assigns SMB roles to Azure AD groups:
-  - **AAD DC Administrators** → Storage File Data SMB Share Contributor
-  - **AAD DC Users** → Storage File Data SMB Share Reader
+- Creates "AVD Admins" and "AVD Users" Azure AD groups during post-deployment
+- Assigns SMB roles to the created groups:
+  - **AVD Admins** → Storage File Data SMB Share Elevated Contributor
+  - **AVD Users** → Storage File Data SMB Share Contributor
 - Configures FSLogix registry settings on session hosts
-- Sets up NTFS permissions on the file share
+- Adds the domain admin user to the AVD Admins group
 
-### Manual Configuration Steps
-
-#### 1. Get Domain Group Object IDs
-Before deployment, you need to get the object IDs for the Azure AD DS groups:
+### Post-Deployment NTFS Configuration (Optional)
+After deployment, you can optionally run the NTFS permissions script for fine-grained control:
 
 ```powershell
-# Run the helper script to get group object IDs
-.\scripts\Get-FSLogixDomainGroups.ps1 -DomainName "your-domain.com"
-
-# Set the environment variables for deployment
-azd env set STORAGE_CONTRIBUTORS_GROUP_ID "group-object-id-1"
-azd env set STORAGE_USERS_GROUP_ID "group-object-id-2"
-```
-
-#### 2. Configure NTFS Permissions (Post-Deployment)
-After deployment, run the NTFS permissions script from a domain-joined machine:
-
-```powershell
-# Download and run the NTFS permissions script
+# Run NTFS permissions script from a domain-joined machine
 .\scripts\Set-FSLogixNTFSPermissions.ps1 `
   -StorageAccountName "your-storage-account" `
   -FileShareName "profiles" `
   -DomainName "your-domain.com"
 ```
 
-#### 3. Verify FSLogix Configuration
-Use the complete setup verification script:
+### Verification and Testing
+Use the verification scripts to test your FSLogix setup:
 
 ```powershell
+# Complete setup verification
 .\scripts\Complete-FSLogixSetup.ps1 `
   -StorageAccountName "your-storage-account" `
   -FileShareName "profiles" `
   -ResourceGroupName "rg-your-env" `
+  -DomainName "your-domain.com"
+
+# Comprehensive FSLogix testing
+.\scripts\Test-FSLogixConfiguration.ps1 `
+  -StorageAccountName "your-storage-account" `
+  -FileShareName "profiles" `
   -DomainName "your-domain.com"
 ```
 

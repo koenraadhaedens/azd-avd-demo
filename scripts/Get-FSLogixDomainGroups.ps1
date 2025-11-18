@@ -2,11 +2,12 @@
 
 <#
 .SYNOPSIS
-    Gets the object IDs for AAD DC domain groups needed for FSLogix storage authentication.
+    Gets the object IDs for AVD groups created during deployment (for reference).
 
 .DESCRIPTION
-    This script retrieves the object IDs for the default AAD DS groups that need access to the FSLogix storage account.
-    These IDs are required for setting up SMB role assignments.
+    This script retrieves the object IDs for the "AVD Admins" and "AVD Users" groups that are 
+    automatically created during the deployment. This is primarily for reference and troubleshooting,
+    as the deployment handles all the necessary group creation and role assignments automatically.
 
 .PARAMETER DomainName
     The domain name for Azure AD DS (e.g., contoso.com)
@@ -62,13 +63,13 @@ try {
     
     # Define the groups we need
     $requiredGroups = @{
-        "AAD DC Administrators" = @{
-            Description = "Administrators group for Azure AD Domain Services"
-            Role = "Storage File Data SMB Share Contributor"
+        "AVD Admins" = @{
+            Description = "Azure Virtual Desktop Administrators (created by deployment)"
+            Role = "Storage File Data SMB Share Elevated Contributor"
         }
-        "AAD DC Users" = @{
-            Description = "Users group for Azure AD Domain Services"  
-            Role = "Storage File Data SMB Share Reader"
+        "AVD Users" = @{
+            Description = "Azure Virtual Desktop Users (created by deployment)"  
+            Role = "Storage File Data SMB Share Contributor"
         }
     }
     
@@ -126,9 +127,9 @@ try {
     Write-Host "========" -ForegroundColor Cyan
     
     if ($results.Count -eq 0) {
-        Write-Host "No Azure AD DS groups found. Please ensure:" -ForegroundColor Red
-        Write-Host "1. Azure AD Domain Services is properly configured" -ForegroundColor Yellow
-        Write-Host "2. The default groups have been created" -ForegroundColor Yellow
+        Write-Host "No AVD groups found. Please ensure:" -ForegroundColor Red
+        Write-Host "1. The deployment has completed successfully" -ForegroundColor Yellow
+        Write-Host "2. The post-provision script has run and created the AVD groups" -ForegroundColor Yellow
         Write-Host "3. You have permissions to read Azure AD groups" -ForegroundColor Yellow
         exit 1
     }
@@ -141,22 +142,21 @@ try {
         Write-Host ""
     }
     
-    # Generate environment variables for azd
-    Write-Host "Environment variables for azd:" -ForegroundColor Cyan
-    Write-Host "==============================" -ForegroundColor Cyan
+    # Generate group information for reference
+    Write-Host "Group information for reference:" -ForegroundColor Cyan
+    Write-Host "================================" -ForegroundColor Cyan
     
-    if ($results.ContainsKey("AAD DC Administrators")) {
-        Write-Host "STORAGE_CONTRIBUTORS_GROUP_ID=$($results['AAD DC Administrators'].ObjectId)" -ForegroundColor Yellow
+    if ($results.ContainsKey("AVD Admins")) {
+        Write-Host "AVD_ADMINS_GROUP_ID=$($results['AVD Admins'].ObjectId)" -ForegroundColor Yellow
     }
     
-    if ($results.ContainsKey("AAD DC Users")) {
-        Write-Host "STORAGE_USERS_GROUP_ID=$($results['AAD DC Users'].ObjectId)" -ForegroundColor Yellow
+    if ($results.ContainsKey("AVD Users")) {
+        Write-Host "AVD_USERS_GROUP_ID=$($results['AVD Users'].ObjectId)" -ForegroundColor Yellow
     }
     
     Write-Host ""
-    Write-Host "Add these to your .env file or set them as azd environment variables:" -ForegroundColor Green
-    Write-Host "azd env set STORAGE_CONTRIBUTORS_GROUP_ID `"$($results['AAD DC Administrators'].ObjectId)`"" -ForegroundColor Cyan
-    Write-Host "azd env set STORAGE_USERS_GROUP_ID `"$($results['AAD DC Users'].ObjectId)`"" -ForegroundColor Cyan
+    Write-Host "Note: These groups are automatically used by the deployment." -ForegroundColor Green
+    Write-Host "No manual configuration is required for FSLogix to work." -ForegroundColor Green
     
 }
 catch {

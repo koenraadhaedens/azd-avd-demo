@@ -143,32 +143,7 @@ try {
     Write-Host "FSLogix configured successfully" -ForegroundColor Green
     Write-Host "Profile path: $profilePath" -ForegroundColor White
     
-    # Download and run NTFS permissions script (run only from first session host)
-    if ($env:COMPUTERNAME -like "*01") {
-        Write-Host "Setting up FSLogix NTFS permissions (first session host only)..." -ForegroundColor Yellow
-        try {
-            $ntfsScriptUrl = "https://raw.githubusercontent.com/koenraadhaedens/azd-avd-demo/main/scripts/Set-FSLogixNTFSPermissions.ps1"
-            $ntfsScriptPath = "$env:TEMP\Set-FSLogixNTFSPermissions.ps1"
-            
-            Invoke-WebRequest -Uri $ntfsScriptUrl -OutFile $ntfsScriptPath -UseBasicParsing
-            
-            # Wait for domain join to be fully complete
-            Write-Host "Waiting for domain services to be ready..." -ForegroundColor Yellow
-            Start-Sleep -Seconds 30
-            
-            # Execute NTFS permissions script
-            & $ntfsScriptPath -StorageAccountName $StorageAccountName -FileShareName $FileShareName -DomainName $DomainName
-            
-            Write-Host "NTFS permissions configured successfully" -ForegroundColor Green
-        }
-        catch {
-            Write-Warning "Failed to configure NTFS permissions: $($_.Exception.Message)"
-            Write-Host "This can be configured manually later using the Set-FSLogixNTFSPermissions.ps1 script" -ForegroundColor Yellow
-        }
-    }
-    else {
-        Write-Host "Skipping NTFS permissions setup (not first session host)" -ForegroundColor Yellow
-    }
+    Write-Host "Note: NTFS permissions and RBAC roles are configured via post-deployment script" -ForegroundColor Yellow
 }
 catch {
     Write-Error "Failed to configure FSLogix: $($_.Exception.Message)"
