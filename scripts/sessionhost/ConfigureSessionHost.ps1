@@ -59,7 +59,6 @@ try {
             Write-Error "Domain join has not completed. Continuing with configuration..."
         }
     }
-}
 catch {
     Write-Error "Failed to verify domain join status: $($_.Exception.Message)"
 }
