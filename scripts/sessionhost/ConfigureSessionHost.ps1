@@ -63,6 +63,9 @@ try {
 catch {
     Write-Error "Failed to verify domain join status: $($_.Exception.Message)"
 }
+catch {
+    Write-Error "Failed to verify domain join status: $($_.Exception.Message)"
+}
 
 # Download and install AVD Boot Loader
 try {
