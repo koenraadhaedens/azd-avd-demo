@@ -99,7 +99,7 @@ resource vnetPeeringToDC 'Microsoft.Network/virtualNetworks/virtualNetworkPeerin
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true
     allowGatewayTransit: false
-    useRemoteGateways: true
+    useRemoteGateways: false
     remoteVirtualNetwork: {
       id: domainControllerVnetId
     }
