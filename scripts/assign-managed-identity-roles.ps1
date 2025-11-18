@@ -107,14 +107,14 @@ catch {
 }
 
 # Function to assign Azure AD role
-function Assign-AzureADRole {
+function Grant-AzureADRole {
     param(
         [string]$RoleName,
         [string]$PrincipalId
     )
     
     try {
-        Write-Host "Assigning role: $RoleName" -ForegroundColor Yellow
+        Write-Host "Granting role: $RoleName" -ForegroundColor Yellow
         
         # Get or create the directory role
         $role = Get-MgDirectoryRole -Filter "displayName eq '$RoleName'" -ErrorAction SilentlyContinue
@@ -156,15 +156,15 @@ function Assign-AzureADRole {
 }
 
 # Assign required roles
-Write-Host "`nAssigning Azure AD roles to managed identity..." -ForegroundColor Cyan
+Write-Host "`nGranting Azure AD roles to managed identity..." -ForegroundColor Cyan
 
 $success = $true
 
 # User Administrator role (to create and manage users)
-$success = $success -and (Assign-AzureADRole -RoleName "User Administrator" -PrincipalId $ManagedIdentityPrincipalId)
+$success = $success -and (Grant-AzureADRole -RoleName "User Administrator" -PrincipalId $ManagedIdentityPrincipalId)
 
 # Groups Administrator role (to create and manage groups)
-$success = $success -and (Assign-AzureADRole -RoleName "Groups Administrator" -PrincipalId $ManagedIdentityPrincipalId)
+$success = $success -and (Grant-AzureADRole -RoleName "Groups Administrator" -PrincipalId $ManagedIdentityPrincipalId)
 
 if ($success) {
     Write-Host "`n✅ All role assignments completed successfully!" -ForegroundColor Green

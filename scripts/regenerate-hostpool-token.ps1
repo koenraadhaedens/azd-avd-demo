@@ -78,15 +78,15 @@ try {
         Write-Host "  ⚠ No session hosts found in host pool" -ForegroundColor Yellow
     } else {
         Write-Host "  Session Hosts:" -ForegroundColor White
-        foreach ($host in $sessionHosts) {
-            $status = $host.Status
+        foreach ($sessionHost in $sessionHosts) {
+            $status = $sessionHost.Status
             $statusColor = switch ($status) {
                 "Available" { "Green" }
                 "Unavailable" { "Red" }
                 "Disconnected" { "Yellow" }
                 default { "White" }
             }
-            Write-Host "    - $($host.Name): $status" -ForegroundColor $statusColor
+            Write-Host "    - $($sessionHost.Name): $status" -ForegroundColor $statusColor
         }
     }
     
