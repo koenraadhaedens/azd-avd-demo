@@ -246,7 +246,3 @@ Write-Host "  - Additional tools installed" -ForegroundColor White
 Write-Host "  - Power settings optimized" -ForegroundColor White
 
 Stop-Transcript
-
-# Restart required for some configurations to take effect
-Write-Host "Restarting computer to complete configuration..." -ForegroundColor Yellow
-Restart-Computer -Force
