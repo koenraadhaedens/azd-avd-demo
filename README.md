@@ -119,6 +119,7 @@ The deployment will automatically:
 1. Create the `addomainadmin` user in Azure AD using the provided credentials
 2. Wait for the user to synchronize to Azure AD Domain Services
 3. Deploy session hosts that use this domain admin for domain join operations
+4. **Automatically run post-deployment configuration** to set up AVD groups and FSLogix permissions
 
 ### 4. Post-Deployment Configuration
 The deployment automatically runs a post-provision script that:
@@ -128,9 +129,19 @@ The deployment automatically runs a post-provision script that:
 - Configures FSLogix registry settings on session hosts
 - Sets up App Attach directory structure
 
-## Manual Post-Deployment Steps
+## Post-Deployment Configuration
 
-### 1. Add Users to Groups
+### Automatic Setup Complete ✅
+The deployment automatically handles:
+- ✅ Creation of "AVD Admins" and "AVD Users" Azure AD groups
+- ✅ Assignment of RBAC roles to storage accounts
+- ✅ Addition of domain admin to AVD Admins group  
+- ✅ FSLogix registry configuration on session hosts
+- ✅ App Attach directory structure setup
+
+### Optional Manual Steps
+
+#### 1. Add Users to Groups
 ```powershell
 # Get group IDs
 $avdUsersGroup = Get-AzADGroup -DisplayName "AVD Users"
@@ -141,7 +152,7 @@ Add-AzADGroupMember -MemberObjectId "user-object-id" -TargetGroupObjectId $avdUs
 Add-AzADGroupMember -MemberObjectId "admin-object-id" -TargetGroupObjectId $avdAdminsGroup.Id
 ```
 
-### 2. Upload MSIX Packages (Optional)
+#### 2. Upload MSIX Packages (Optional)
 ```powershell
 # Get storage context
 $storageAccount = Get-AzStorageAccount -ResourceGroupName "rg-your-env-name" -Name "*appattach*"
@@ -158,7 +169,7 @@ This deployment automatically configures FSLogix with Azure AD Domain Services a
 ### Automatic Setup
 The deployment automatically:
 - Enables Azure AD DS authentication on the FSLogix storage account
-- Creates "AVD Admins" and "AVD Users" Azure AD groups during post-deployment
+- Creates "AVD Admins" and "AVD Users" Azure AD groups via automatic post-deployment script
 - Assigns SMB roles to the created groups:
   - **AVD Admins** → Storage File Data SMB Share Elevated Contributor
   - **AVD Users** → Storage File Data SMB Share Contributor

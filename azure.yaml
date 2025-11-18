@@ -1,8 +1,19 @@
 name: tdd-azd-avd
 metadata:
   template: tdd-azd-avd@0.0.1-beta
+
 infra:
-   provider: "bicep"
+  provider: "bicep"
+
+hooks:
+  postdeploy:
+    windows:
+      shell: pwsh
+      run: .azd\hooks\postdeploy.ps1
+    posix:
+      shell: bash  
+      run: |
+        pwsh .azd/hooks/postdeploy.ps1
 
 
 

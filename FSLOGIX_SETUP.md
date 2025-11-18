@@ -19,10 +19,10 @@
 - FSLogix storage account created with Azure AD DS authentication enabled
 - Domain configuration applied based on existing domain setup
 
-#### 2. **During Post-Provision Script**
-- "AVD Admins" and "AVD Users" groups are created
+#### 2. **During Post-Provision Script (Automatic)**
+- "AVD Admins" and "AVD Users" groups are created automatically via azd hooks
 - `addomainadmin` user is added to "AVD Admins" group
-- SMB roles are assigned:
+- SMB roles are assigned automatically:
   - **AVD Admins** → Storage File Data SMB Share Elevated Contributor
   - **AVD Users** → Storage File Data SMB Share Contributor
 - FSLogix registry settings configured on session hosts
