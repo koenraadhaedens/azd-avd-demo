@@ -131,8 +131,44 @@ try {
     Set-ItemProperty -Path $fslogixRegPath -Name "VolumeType" -Value "VHDX" -Type String
     Set-ItemProperty -Path $fslogixRegPath -Name "ConcurrentUserSessions" -Value 1 -Type DWORD
     
+    # Additional FSLogix settings for better performance and reliability
+    Set-ItemProperty -Path $fslogixRegPath -Name "ProfileType" -Value 0 -Type DWORD
+    Set-ItemProperty -Path $fslogixRegPath -Name "RedirXMLSourceFolder" -Value $profilePath -Type String
+    Set-ItemProperty -Path $fslogixRegPath -Name "AccessNetworkAsComputerObject" -Value 1 -Type DWORD
+    Set-ItemProperty -Path $fslogixRegPath -Name "LockedRetryCount" -Value 3 -Type DWORD
+    Set-ItemProperty -Path $fslogixRegPath -Name "LockedRetryInterval" -Value 15 -Type DWORD
+    Set-ItemProperty -Path $fslogixRegPath -Name "ReAttachRetryCount" -Value 3 -Type DWORD
+    Set-ItemProperty -Path $fslogixRegPath -Name "ReAttachIntervalSeconds" -Value 15 -Type DWORD
+    
     Write-Host "FSLogix configured successfully" -ForegroundColor Green
     Write-Host "Profile path: $profilePath" -ForegroundColor White
+    
+    # Download and run NTFS permissions script (run only from first session host)
+    if ($env:COMPUTERNAME -like "*01") {
+        Write-Host "Setting up FSLogix NTFS permissions (first session host only)..." -ForegroundColor Yellow
+        try {
+            $ntfsScriptUrl = "https://raw.githubusercontent.com/koenraadhaedens/azd-avd-demo/main/scripts/Set-FSLogixNTFSPermissions.ps1"
+            $ntfsScriptPath = "$env:TEMP\Set-FSLogixNTFSPermissions.ps1"
+            
+            Invoke-WebRequest -Uri $ntfsScriptUrl -OutFile $ntfsScriptPath -UseBasicParsing
+            
+            # Wait for domain join to be fully complete
+            Write-Host "Waiting for domain services to be ready..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 30
+            
+            # Execute NTFS permissions script
+            & $ntfsScriptPath -StorageAccountName $StorageAccountName -FileShareName $FileShareName -DomainName $DomainName
+            
+            Write-Host "NTFS permissions configured successfully" -ForegroundColor Green
+        }
+        catch {
+            Write-Warning "Failed to configure NTFS permissions: $($_.Exception.Message)"
+            Write-Host "This can be configured manually later using the Set-FSLogixNTFSPermissions.ps1 script" -ForegroundColor Yellow
+        }
+    }
+    else {
+        Write-Host "Skipping NTFS permissions setup (not first session host)" -ForegroundColor Yellow
+    }
 }
 catch {
     Write-Error "Failed to configure FSLogix: $($_.Exception.Message)"

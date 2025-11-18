@@ -151,6 +151,82 @@ $ctx = $storageAccount.Context
 Set-AzStorageFileContent -ShareName "appattach" -Source "C:\path\to\package.msix" -Path "msix-packages/package.msix" -Context $ctx
 ```
 
+## FSLogix Configuration with Azure AD DS
+
+This deployment configures FSLogix with Azure AD Domain Services authentication for seamless profile management. The configuration includes:
+
+### Automatic Setup
+The deployment automatically:
+- Enables Azure AD DS authentication on the FSLogix storage account
+- Assigns SMB roles to Azure AD groups:
+  - **AAD DC Administrators** → Storage File Data SMB Share Contributor
+  - **AAD DC Users** → Storage File Data SMB Share Reader
+- Configures FSLogix registry settings on session hosts
+- Sets up NTFS permissions on the file share
+
+### Manual Configuration Steps
+
+#### 1. Get Domain Group Object IDs
+Before deployment, you need to get the object IDs for the Azure AD DS groups:
+
+```powershell
+# Run the helper script to get group object IDs
+.\scripts\Get-FSLogixDomainGroups.ps1 -DomainName "your-domain.com"
+
+# Set the environment variables for deployment
+azd env set STORAGE_CONTRIBUTORS_GROUP_ID "group-object-id-1"
+azd env set STORAGE_USERS_GROUP_ID "group-object-id-2"
+```
+
+#### 2. Configure NTFS Permissions (Post-Deployment)
+After deployment, run the NTFS permissions script from a domain-joined machine:
+
+```powershell
+# Download and run the NTFS permissions script
+.\scripts\Set-FSLogixNTFSPermissions.ps1 `
+  -StorageAccountName "your-storage-account" `
+  -FileShareName "profiles" `
+  -DomainName "your-domain.com"
+```
+
+#### 3. Verify FSLogix Configuration
+Use the complete setup verification script:
+
+```powershell
+.\scripts\Complete-FSLogixSetup.ps1 `
+  -StorageAccountName "your-storage-account" `
+  -FileShareName "profiles" `
+  -ResourceGroupName "rg-your-env" `
+  -DomainName "your-domain.com"
+```
+
+### FSLogix Registry Settings
+The deployment configures these FSLogix settings:
+- **VHDLocations**: `\\{storageaccount}.file.core.windows.net\profiles`
+- **Enabled**: 1 (enabled)
+- **VolumeType**: VHDX
+- **SizeInMBs**: 10240 (10GB)
+- **IsDynamic**: 1 (dynamic disks)
+- **DeleteLocalProfileWhenVHDShouldApply**: 1
+- **AccessNetworkAsComputerObject**: 1 (use machine account)
+
+### Troubleshooting FSLogix
+Common FSLogix issues and solutions:
+
+```powershell
+# Check FSLogix registry settings
+Get-ItemProperty -Path "HKLM:\SOFTWARE\FSLogix\Profiles"
+
+# Test storage connectivity
+Test-NetConnection -ComputerName "storageaccount.file.core.windows.net" -Port 445
+
+# Check FSLogix logs
+Get-ChildItem -Path "C:\ProgramData\FSLogix\Logs" -Recurse | Sort LastWriteTime -Descending
+
+# Verify NTFS permissions
+icacls "\\storageaccount.file.core.windows.net\profiles"
+```
+
 ## Resource Naming Convention
 
 | Resource Type | Naming Pattern | Example |

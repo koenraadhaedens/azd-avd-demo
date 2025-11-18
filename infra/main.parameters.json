@@ -34,6 +34,12 @@
     },
     "sessionHostCount": {
       "value": "${SESSION_HOST_COUNT=2}"
+    },
+    "storageContributorsGroupId": {
+      "value": "${STORAGE_CONTRIBUTORS_GROUP_ID}"
+    },
+    "storageUsersGroupId": {
+      "value": "${STORAGE_USERS_GROUP_ID}"
     }
   }
 }

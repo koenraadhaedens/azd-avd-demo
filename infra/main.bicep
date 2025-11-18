@@ -42,6 +42,12 @@ param subnetAddressPrefix string = '10.0.1.0/24'
 @description('Number of session hosts to deploy')
 param sessionHostCount int = 2
 
+@description('Storage Contributors group object ID for FSLogix (AAD DC Administrators)')
+param storageContributorsGroupId string
+
+@description('Storage Users group object ID for FSLogix (AAD DC Users)')
+param storageUsersGroupId string
+
 var tags = {
   'azd-env-name': environmentName
   CostControl: 'Ignore'
@@ -89,6 +95,9 @@ module fslogixStorage './modules/storage-fslogix.bicep' = {
   params: {
     environmentName: environmentName
     location: location
+    domainName: domainName
+    storageContributorsGroupId: storageContributorsGroupId
+    storageUsersGroupId: storageUsersGroupId
     tags: tags
   }
 }
