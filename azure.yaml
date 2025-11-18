@@ -11,7 +11,7 @@ hooks:
       shell: pwsh
       run: .azd\hooks\postdeploy.ps1
     posix:
-      shell: bash  
+      shell: sh  
       run: |
         pwsh .azd/hooks/postdeploy.ps1
 
